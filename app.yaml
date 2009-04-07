@@ -1,0 +1,8 @@
+application: feed-buster
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: /mediaInjection(.*)
+  script: feed-buster.py
