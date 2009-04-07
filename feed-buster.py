@@ -4,11 +4,10 @@ import feedparser
 import re
 
 from xml.dom import minidom
-from elementtree import ElementTree 
+from xml.etree import * 
 from xml.sax import saxutils 
 
 from google.appengine.api import urlfetch
-
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
@@ -17,7 +16,7 @@ class MediaInjection(webapp.RequestHandler):
 
   def get(self):
     feedUrl = self.request.get('inputFeedUrl')
-
+    
     # fetch feed XML string
     fetchResult = urlfetch.fetch(feedUrl) 
     
@@ -27,27 +26,45 @@ class MediaInjection(webapp.RequestHandler):
       return
     
     feedXMLString = fetchResult.content
-    feed = feedparser.parse(feedXMLString)
+    # feed = feedparser.parse(feedXMLString)
     
-    for entry in feed.entries:
-      if entry.has_key('summary'):
-				stringToParse = saxutils.unescape(entry.content[0].value) 
-			  imgSrcs = re.findall('<\s*img [^\>]*src\s*=\s*["\'](.*?)["\']', stringToParse)
-        for imgSrc in imgSrcs:
-					self.response.out.write(imgSrc.group(0) + '\n')
-        
-
+    feedTree = ElementTree.fromstring(feedXMLString)
+    items = feedTree.findall(".//item")
+    for item in items: 
+      media = []
+      contents = item.findall(".//{http://purl.org/rss/1.0/modules/content/}encoded")
+      
+      for content in contents:
+        stringToParse = saxutils.unescape(ElementTree.tostring(content))
+        media += re.findall(r'<img[^>]*? src=[\'"]([^\'"]+)["\'][^>]*?>', stringToParse, re.IGNORECASE) 
+      
+      media = set(media)
+      
+      for mediaElem in media:
+        elem = Element("{http://search.yahoo.com/mrss/}content")
+        elem.attrib["src"] = mediaElem.src
+        elem.attrib["type"] = mediaElem.type
+        idem.append(elem)
+    self.response.out.write(ElementTree.tostring(feedTree))
+    
+    #bla = 2+2
+    #children = item.getchildren()
+    #for child in children:
+    #  self.response.out.write(child.tag)
+    #self.response.out.write("ok")
+    #for entry in feed.entries:
+    #  if entry.has_key('content'):
+    #    stringToParse = saxutils.unescape(entry.content[0].value)
+    #    imgSrcs = re.findall(r'<img[^>]*? src=[\'"]([^\'"]+)["\'][^>]*?>', stringToParse, re.IGNORECASE) 
+    #    for imgSrc in imgSrcs:
+    #      self.response.out.write(imgSrc + '\n')
     # parse feed XML into DOM
     # feedXMLString = fetchResult.content
     # feedDOM = minidom.parseString(feedXMLString) 
     # >>> a = a.decode("string-escape")
     #self.response.out.write(feedDOM.toxml())
-    
 		# <\s*img [^\>]*src\s*=\s*(["\'])(.*?)\1
-		
-		
 		# ElementTree  - elem = fromstring(text) # same as XML(text)
-		
 		# <TAG\b[^>]*>(.*?)</TAG>
 		# http://docs.python.org/dev/howto/regex.html
 		# http://docs.python.org/library/htmlparser.html
@@ -67,22 +84,15 @@ class MediaInjection(webapp.RequestHandler):
 		# feedTree = ElementTree.XML(feedXMLString)
 		# for outline in tree.findall("//outline"): 
 		# print outline.get('xmlUrl') 
-		
     # contentElements = feedDOM.getElementsByTagName("description")
     # for content in contentElements:
     #  self.response.out.write(content.toxml() + "\n")
-      
     # pokupi sve slike iz summarya i contenta, izbaci duplikate
     # problem sa namespaceima ns:item
-    
     #check if rss or atom
-    
     #extract media info
-    
     #generate media items
-    
     #insert items into feed
-    
     # self.response.out.write(feedXMLString)
 
 application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection)], debug=True)
