@@ -43,7 +43,7 @@ class MediaInjection(webapp.RequestHandler):
       
       for mediaElem in media:
         elem = ElementTree.Element("{http://search.yahoo.com/mrss/}content")
-        elem.attrib["src"] = mediaElem
+        elem.attrib["url"] = mediaElem
         elem.attrib["type"] = "image/jpg"
         item.append(elem)
     self.response.out.write(ElementTree.tostring(feedTree))
