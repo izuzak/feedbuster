@@ -4,7 +4,8 @@ import feedparser
 import re
 
 from xml.dom import minidom
-from xml.etree import * 
+from xml.etree import ElementTree 
+
 from xml.sax import saxutils 
 
 from google.appengine.api import urlfetch
@@ -41,10 +42,10 @@ class MediaInjection(webapp.RequestHandler):
       media = set(media)
       
       for mediaElem in media:
-        elem = Element("{http://search.yahoo.com/mrss/}content")
-        elem.attrib["src"] = mediaElem.src
-        elem.attrib["type"] = mediaElem.type
-        idem.append(elem)
+        elem = ElementTree.Element("{http://search.yahoo.com/mrss/}content")
+        elem.attrib["src"] = mediaElem
+        elem.attrib["type"] = "image/jpg"
+        item.append(elem)
     self.response.out.write(ElementTree.tostring(feedTree))
     
     #bla = 2+2
