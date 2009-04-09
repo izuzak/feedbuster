@@ -2,10 +2,11 @@ import cgi
 import os
 import feedparser
 import re
+import urllib
+import mimetypes
 
 from xml.dom import minidom
 from xml.etree import ElementTree 
-
 from xml.sax import saxutils 
 
 from google.appengine.api import urlfetch
@@ -16,36 +17,70 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 class MediaInjection(webapp.RequestHandler): 
 
   def get(self):
+    # get feed url
     feedUrl = self.request.get('inputFeedUrl')
+    
+    # decode feed url
+    feedUrl = urllib.unquote(feedUrl)
     
     # fetch feed XML string
     fetchResult = urlfetch.fetch(feedUrl) 
     
-    # check if fetched ok
-    if fetchResult.status_code != 200:
-      self.response.out.write("invalidu!")
-      return
+    # check if fetch succeeded
+    # if fetchResult.status_code != 200:
+    #  self.response.set_status(500) # check for appropriate status msg
+    #  return
     
     feedXMLString = fetchResult.content
-    # feed = feedparser.parse(feedXMLString)
     
+    # fpFeed = feedparser.parse(feedXMLString)
     feedTree = ElementTree.fromstring(feedXMLString)
-    items = feedTree.findall(".//item")
+    #self.response.out.write(ElementTree.tostring(feedTree))
+
+    # is the feed RSS
+    if len(feedTree.findall('.//item')) > 0:
+      #self.response.out.write("RSS")
+      parsingParams = { 'items' : 'item', 'crawlTags' : ['description', '{http://purl.org/rss/1.0/modules/content/}encoded', 'body', 'fullitem'],
+                        'generateParams' : {'tag' : '{http://search.yahoo.com/mrss/}content', 'attrs': {}, 'src' : 'url'}}
+    # is the feed ATOM
+    elif len(feedTree.findall('.//entry')) > 0:
+      #self.response.out.write("ATOM")
+      parsingParams = { 'items' : 'entry', 'crawlTags' : ['summary', 'content'],
+                        'generateParams' : {'tag' : 'link', 'attrs': {'rel' : 'enclosure'}, 'src' : 'href'}}
+    # not RSS or ATOM -> error
+    else:
+      #self.response.out.write("LOL")
+      #self.response.set_status(500)
+      return 
+    
+    # find and generate media items
+    items = feedTree.findall('.//' + parsingParams['items'])
+    # self.response.out.write(len(items))
     for item in items: 
-      media = []
-      contents = item.findall(".//{http://purl.org/rss/1.0/modules/content/}encoded")
+      mediaLinks = []
       
-      for content in contents:
-        stringToParse = saxutils.unescape(ElementTree.tostring(content))
-        media += re.findall(r'<img[^>]*? src=[\'"]([^\'"]+)["\'][^>]*?>', stringToParse, re.IGNORECASE) 
+      # search for media in description and content
+      nodesToCrawl = []
+      for crawlTag in parsingParams['crawlTags']:
+        nodesToCrawl += item.findall('.//' + crawlTag)
       
-      media = set(media)
+      for nodeToCrawl in nodesToCrawl:
+        stringToParse = saxutils.unescape(ElementTree.tostring(nodeToCrawl))
+        mediaLinks += re.findall(r'<img[^>]*? src=[\'"]([^\'"]+)["\'][^>]*?>', stringToParse, re.IGNORECASE) 
       
-      for mediaElem in media:
-        elem = ElementTree.Element("{http://search.yahoo.com/mrss/}content")
-        elem.attrib["url"] = mediaElem
-        elem.attrib["type"] = "image/jpg"
-        item.append(elem)
+
+      # remove duplicates
+      mediaLinks = set(mediaLinks)
+      
+      # create media items
+      for mediaLink in mediaLinks:
+        elem = ElementTree.Element(parsingParams['generateParams']['tag'], parsingParams['generateParams']['attrs'])
+        elem.attrib[parsingParams['generateParams']['src']] = mediaLink
+        elem.attrib['type'] = mimetypes.guess_type(mediaLink)[0]
+        if elem.attrib['type'] != None:
+          item.append(elem)
+    
+    self.response.headers['Content-Type'] = 'text/xml' 
     self.response.out.write(ElementTree.tostring(feedTree))
     
     #bla = 2+2
