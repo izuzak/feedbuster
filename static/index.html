@@ -1,0 +1,112 @@
+<html>
+  <title> Feed-buster - services for remixing RSS/ATOM feeds </title>
+  <head>
+    <style type="text/css">
+      body {
+        background-color:#ffffff;
+        color:#000000;
+        font-family:arial,sans-serif
+      }
+    </style> 
+    <h1 style="margin-left:auto; margin-left: 60px; width:60%;">Feed-buster</h1>
+    <p style="margin-left:auto; margin-left: 60px; width:60%;"> Feed-buster description</p>
+    <script type="text/javascript">
+      function generate() {
+        var id = document.getElementById("ytLink").value;
+        id = id.substring(id.indexOf("v=")+2, id.indexOf("v=")+2+11);
+        var text = escape(document.getElementById("quoteTxt").value);
+        var play = "play?vid=" + id + "&txt=" + text;
+        document.getElementById("outTxt").value = "http://ytquote.appspot.com/" + play;
+      }
+      
+      function goToLink() {
+        var id = document.getElementById("ytLink").value;
+        id = id.substring(id.indexOf("v=")+2, id.indexOf("v=")+2+11);
+        var text = escape(document.getElementById("quoteTxt").value);
+        var play = "play?vid=" + id + "&txt=" + text;
+        window.open(window.location + play);
+        //        window.location = window.location + play;
+      }
+    </script>
+  </head>
+  <body>
+    <table name="frm" id="frm" style="margin-left: 60px; ">
+      <tr>
+        <td>
+          <label for="ytLink">YouTube video link:</label>
+        </td>
+        <td>
+          <input style="width:300px" name="ytLink" id="ytLink" type="text" value="">
+        </td>
+      </tr>
+      <br>
+      <tr>
+        <td style="vertical-align: top;">
+          <label style="vertical-align: top;" for="quoteTxt">Text for quote:</label>
+        </td>
+        <td>
+          <textarea name="quoteTxt" id="quoteTxt" rows="5" style="width:300px"></textarea>
+        </td>
+      </tr>
+      <br>
+      <tr>
+      <td>
+      <label for="outTxt">YouTube quote link:</label>
+      </td><td>
+      <input style="width:300px" name="outTxt" id="outTxt" type="text" value="">
+      </td>
+      </tr>
+      <tr><td></td><td>
+      <button name="genBtn" id="genBtn" onclick="generate();">Generate link</button>
+      <button name="prvBtn" id="prvBtn" onclick="goToLink();"> Go to link</button>
+      </td>
+      </tr>
+    </table>
+    <br><br><br>
+    
+      <table style="margin-left:60px;">
+      <tr style="margin-left:60px;">
+      <td>
+      <div id="srcTxt" style="vertical-align: middle;">
+        Source code & feedback:
+      </div>
+      </td>
+      <td>
+      <div id="gcBtn" style="margin: 5px; padding: 5px; vertical-align: middle;">
+        <a href="http://code.google.com/p/ytquote/">
+          <img src="http://www.zoho.com/images/google_code_logo.gif" alt="Hosted on Google Code!" />
+        </a>
+      </div>
+      </td>
+      <td>
+      <div id="pwrTxt" style="margin: 5px; padding: 5px; vertical-align: middle;">
+        Powered by:
+      </div>
+      </td>
+      <td>
+      <div id="aeBtn" style="margin: 5px; padding: 5px; vertical-align: middle;">
+        <a href="http://code.google.com/appengine/">
+          <img src="http://code.google.com/appengine/images/appengine-silver-120x30.gif" alt="Powered by Google App Engine" />
+        </a>
+      </div>
+      </td>
+      <td>
+      <div id="ytBtn" style="margin: 5px; padding: 5px; vertical-align: middle;">
+        <a href="http://code.google.com/apis/youtube/overview.html">
+          <img src="http://sites.google.com/site/poweredbyyoutube/_/rsrc/1215714777206/config/app/images/customLogo/customLogo.gif?revision=1" alt="Powered by YouTube" />
+        </a>
+      </div>
+      </td>
+      </tr>
+      </table>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-5997170-2");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+  </body>
+<html>

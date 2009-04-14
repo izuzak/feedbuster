@@ -9,3 +9,7 @@ handlers:
   
 - url: /languageFilter(.*)
   script: feed-buster.py
+	
+- url: /(.*)
+  static_files : static/index.html
+  upload: static/index.html
