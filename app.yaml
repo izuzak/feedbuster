@@ -1,15 +1,8 @@
 application: feed-buster
-version: 3
+version: 4
 runtime: python
 api_version: 1
 
 handlers:
 - url: /mediaInjection(.*)
   script: feed-buster.py
-  
-- url: /languageFilter(.*)
-  script: feed-buster.py
-	
-- url: /(.*)
-  static_files : static/index.html
-  upload: static/index.html

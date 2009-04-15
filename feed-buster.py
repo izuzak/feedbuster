@@ -3,6 +3,7 @@ import os
 
 import re
 import urllib
+import urlparse
 import mimetypes
 
 import xpath
@@ -45,10 +46,9 @@ class FeedBusterUtils():
       return None
 
 class MediaInjection(webapp.RequestHandler): 
-  
   def get(self):
     requestParams = FeedBusterUtils.getRequestParams(self.request.url, ['inputFeedUrl']) 
-    feedUrl = requestParams['inputFeedUrl']
+    feedUrl = requestParams['inputFeedUrl'].replace(" ", "%20")
     feedTree = FeedBusterUtils.fetchFeed(feedUrl)
     feedType = FeedBusterUtils.getFeedType(feedTree)
 
@@ -98,14 +98,8 @@ class MediaInjection(webapp.RequestHandler):
     self.response.headers['Content-Type'] = 'text/xml' 
     self.response.out.write(feedTree.toxml())
     return
-
-class LanguageFilter(webapp.RequestHandler): 
-
-  def get(self):
-    return
       
-application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection),
-                                      ('/languageFilter.*', LanguageFilter)], debug=True)
+application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection)], debug=True)
 
 def main():
   run_wsgi_app(application)
