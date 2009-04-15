@@ -60,8 +60,6 @@ class MediaInjection(webapp.RequestHandler):
       return
     
     rootElem = feedTree.documentElement
-    #optimize - stavi ih u parsingparams, ili jos bolje nekako kroz child nodes izbjegni xpath
-    # spomeni http://code.google.com/p/py-dom-xpath/
     feedItems = xpath.find('//*[local-name() = "%s"]' % parsingParams['items'], rootElem)
     
     for feedItem in feedItems:
@@ -100,76 +98,11 @@ class MediaInjection(webapp.RequestHandler):
     self.response.headers['Content-Type'] = 'text/xml' 
     self.response.out.write(feedTree.toxml())
     return
-      
-      # delete thumbnails <ns0:thumbnail height="72" url="http://4.bp.blogspot.com/_wGr8njEWjtI/SeDiV_V2xgI/AAAAAAAACcQ/EoarbHv4g30/s72-c/+Easter+cute-food-easter-bunny-cake.jpg" width="72" xmlns:ns0="http://search.yahoo.com/mrss/" />
-      # view-source:http://feed-buster.appspot.com/mediaInjection?inputFeedUrl=http://feeds2.feedburner.com/CakeWrecks?format=xml
-      # <media:content url="http://www.youtube.com/v/IyCRJmerW1Q&amp;f=user_favorites&amp;c=ytapi-FriendFeed-FriendFeed-8e762i7n-0&amp;d=C3jWYyDXZCPRCne8EtVoKmD9LlbsOl3qUImVMV6ramM&amp;app=youtube_gdata" type="application/x-shockwave-flash" width="" height=""/>
-      
-      #<media:content url="http://www.youtube.com/v/IyCRJmerW1Q&amp;f=user_favorites&amp;c=ytapi-FriendFeed-FriendFeed-8e762i7n-0&amp;d=C3jWYyDXZCPRCne8EtVoKmD9LlbsOl3qUImVMV6ramM&amp;app=youtube_gdata" type="application/x-shockwave-flash" width="" height=""/>
-    
-		# http://docs.python.org/library/htmlparser.html
-		# http://docs.python.org/library/htmllib.html#module-htmllib
-		# http://www.crummy.com/software/BeautifulSoup/
-		# http://code.google.com/p/html5lib/
-		# http://groups.google.com/group/google-appengine/browse_thread/thread/63d7afda2ca17dc4/7e73696b46f70c54?lnk=gst&q=parse+html#7e73696b46f70c54
-		# http://lethain.com/entry/2008/jun/09/deployment-scripts-with-beautifulsoup/
-		# http://stackoverflow.com/questions/300445/how-to-unquote-a-urlencoded-unicode-string-in-python
-		# http://blog.ianbicking.org/2008/03/30/python-html-parser-performance/
-		# http://blog.ianbicking.org/2008/12/10/lxml-an-underappreciated-web-scraping-library/
-		# http://blog.emmesdee.com/2008/08/more-google-app-engine-rss.html
-		# http://stackoverflow.com/questions/138313/how-to-extract-img-src-title-and-alt-from-html-using-php
-		# http://stackoverflow.com/questions/257409/download-image-file-from-the-html-page-source-using-python
-		# http://stackoverflow.com/questions/326103/why-is-this-regex-returning-errors-when-i-use-it-to-fish-img-srcs-from-html
 
 class LanguageFilter(webapp.RequestHandler): 
 
   def get(self):
     return
-    #params = FeedBusterUtils.getRequestParams(self.request.url, ['inputFeedUrl', 'searchQuery'])
-    #feedUrl = params['inputFeedUrl']
-    #query = params['searchQuery']
-
-    #fetchResult = urlfetch.fetch(feedUrl) 
-    #feedXMLString = fetchResult.content
-    #feedType = FeedBusterUtils.getFeedType(self, feedXMLString)
-    
-    #if feedType == 'rss':
-    #  parsingParams = { 'items' : 'item', 'crawlTags' : ['description', '{http://purl.org/rss/1.0/modules/content/}encoded', 'body', 'fullitem', 'title']}
-    #elif feedType == 'atom':
-    #  parsingParams = { 'items' : '{http://www.w3.org/2005/Atom}entry', 'crawlTags' : ['{http://www.w3.org/2005/Atom}summary', '{http://www.w3.org/2005/Atom}content', '{http://www.w3.org/2005/Atom}title']}
-    #else:
-    #  return
-
-    #feedTree = ElementTree.fromstring(feedXMLString)
-    #items = feedTree.findall('.//' + parsingParams['items'])
-    
-    #for item in items: 
-    #  #find title, description and content
-    #  nodesToCrawl = []
-    #  for crawlTag in parsingParams['crawlTags']:
-    #    nodesToCrawl += item.findall('.//' + crawlTag)
-    #  
-    #  detectionItem = ''
-    #  for nodeToCrawl in nodesToCrawl:
-    #    stringToParse = saxutils.unescape(ElementTree.tostring(nodeToCrawl))
-    #    detectionItem += stringToParse + '\n'
-    #  #http://code.google.com/apis/ajaxlanguage/documentation/#fonje
-    #  #http://ajax.googleapis.com/ajax/services/language/detect?v=1.0&q=dobar%20dan%20bok%20zagreb%20krevet%20jastuk
-    #  detectionItem = detectionItem[0:1000]
-    #  detectLangApiUrl = 'http://ajax.googleapis.com/ajax/services/language/detect?v=1.0&q=' + urllib.quote(detectionItem)
-    #  detectLangResult = urlfetch.fetch(detectLangApiUrl) 
-    #  detectLangString = detectLangResult.content
-    #  detectLangString = detectLangString
-    #  detectLang = simplejson.loads(str(detectLangString))
-    #  
-    #  if (detectLang['responseData']['isReliable']): #confidence
-    #    lang = detectLang['responseData']['language']
-    #    if (lang != query):
-    #      item.clear()
-    #      #feedTree.remove(item)
-    #return
-    #self.response.headers['Content-Type'] = 'text/xml' 
-    #self.response.out.write(ElementTree.tostring(feedTree))
       
 application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection),
                                       ('/languageFilter.*', LanguageFilter)], debug=True)
