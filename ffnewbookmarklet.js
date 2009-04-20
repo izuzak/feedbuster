@@ -6,13 +6,9 @@ var kShadowSize = 7;
 var gAvailableImages = [];
 
 function bookmarklet() {
-//document.body.innerHTML += "bm \n";
 if (byId("ff__container")) {
 return;
 }
-
-//TODO - selection ne postoji
-//document.body.innerHTML += "0 \n";
 
 var selection;
 if (window.getSelection) {
@@ -21,30 +17,21 @@ selection = ''+window.getSelection();
 selection = document.selection.createRange().text;
 }
 
-// TODO - kada postoji ff_reshare
-// TODO - ubaciti IMG tag za sliku
-
-//arrX = document.location.split(".").pop()
-
-//if (arrX && (arrX.toLowerCase() == "jpg" || arrX.toLowerCase() == "bmp")) {
-  
-//}
-
 // Highlight all the images on the page
-
-//document.body.innerHTML += "1 \n";
 
 var numImages = 0;
 var imageElements = window.ff__reshare ? [] : document.getElementsByTagName("img");
 for (var i = 0; i < imageElements.length; i++) {
-//document.body.innerHTML += "1.1 \n";
+
 var image = imageElements[i];
-//if (image.width < kMinImageSize || image.height < kMinImageSize) {
-//document.body.innerHTML += "1.1.1 \n";
-//
-//continue;
-//}
-//document.body.innerHTML += "1.1.2 \n";
+
+/*
+izuzak: commented this out
+
+if (image.width < kMinImageSize || image.height < kMinImageSize) {
+continue;
+}
+*/
 numImages++;
 var listener = addEventListener(image, "mouseover", curry(onImageMouseOver, image));
 gAvailableImages.push({
@@ -53,9 +40,6 @@ cursor: image.style.cursor,
 listener: listener
 });
 }
-
-//document.body.innerHTML += "2 \n";
-
 
 // Create the share dialog in the corner of the window
 var container = div();
@@ -385,20 +369,14 @@ byId("ff__close").onclick = removeContainer;
 setTimeout(removeContainer, 3500);
 }
 
-//document.body.innerHTML += "first \n";
+/*
+izuzak: changed from:
 
-// TODO - head
-//if (document.getElementsByTagName('head').length == 0) {
-//  document.body.innerHTML += "append \n";
-//  var elX = document.createElement("head");
-//  document.appendChild(elX);
-//}
+*/
 
 if (frames.length > document.getElementsByTagName('iframe').length) {
-//document.body.innerHTML += "no! \n";
 window.location.href = 'http://friendfeed.com/?link=' + escape(window.location.href);
 } else {
-//document.body.innerHTML += "else \n";
 bookmarklet();
 }
 })();
