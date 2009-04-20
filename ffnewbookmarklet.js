@@ -37,10 +37,14 @@ document.body.innerHTML += "1 \n";
 var numImages = 0;
 var imageElements = window.ff__reshare ? [] : document.getElementsByTagName("img");
 for (var i = 0; i < imageElements.length; i++) {
+document.body.innerHTML += "1.1 \n";
 var image = imageElements[i];
 if (image.width < kMinImageSize || image.height < kMinImageSize) {
+document.body.innerHTML += "1.1.1 \n";
+
 continue;
 }
+document.body.innerHTML += "1.1.2 \n";
 numImages++;
 var listener = addEventListener(image, "mouseover", curry(onImageMouseOver, image));
 gAvailableImages.push({
