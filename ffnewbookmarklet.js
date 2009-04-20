@@ -11,6 +11,7 @@ return;
 }
 
 //TODO - selection ne postoji
+alert("0");
 
 var selection;
 if (window.getSelection) {
@@ -22,7 +23,16 @@ selection = document.selection.createRange().text;
 // TODO - kada postoji ff_reshare
 // TODO - ubaciti IMG tag za sliku
 
+//arrX = document.location.split(".").pop()
+
+//if (arrX && (arrX.toLowerCase() == "jpg" || arrX.toLowerCase() == "bmp")) {
+  
+//}
+
 // Highlight all the images on the page
+
+alert("1");
+
 var numImages = 0;
 var imageElements = window.ff__reshare ? [] : document.getElementsByTagName("img");
 for (var i = 0; i < imageElements.length; i++) {
@@ -38,6 +48,9 @@ cursor: image.style.cursor,
 listener: listener
 });
 }
+
+alert("2");
+
 // Create the share dialog in the corner of the window
 var container = div();
 container.id = "ff__container";
@@ -368,7 +381,8 @@ setTimeout(removeContainer, 3500);
 
 // TODO - head
 if (document.getElementsByTagName('head').length == 0) {
-  document.appendChild(document.createElement("head"))
+  var elX = document.createElement("head");
+  document.appendChild(elX);
 }
 
 if (document.getElementsByTagName('head').length == 0 ||
