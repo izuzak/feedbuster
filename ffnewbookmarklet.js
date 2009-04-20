@@ -390,8 +390,8 @@ if (document.getElementsByTagName('head').length == 0) {
   document.appendChild(elX);
 }
 
-if (document.getElementsByTagName('head').length == 0 ||
-frames.length > document.getElementsByTagName('iframe').length) {
+if (document.getElementsByTagName('head').length == 0) {
+// || frames.length > document.getElementsByTagName('iframe').length) {
 document.body.innerHTML += "no! \n";
 window.location.href = 'http://friendfeed.com/?link=' + escape(window.location.href);
 } else {
