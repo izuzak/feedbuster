@@ -63,13 +63,14 @@ foreground.style.backgroundColor = "white";
 foreground.style.zIndex = 2;
 foreground.style.width = "450px";
 foreground.style.height = "220px";
+/*
 elemZ = document.createElement("iframe");
 elemZ.frameborder="0";
 elemZ.id="ff__iframe";
 elemZ.style="width:100%;height:100%;border:0px;padding:0px;margin:0px";
 foreground.appendChild(elemZ);
-
-//foreground.innerHTML = '<iframe frameborder="0" id="ff__iframe" style="width:100%;height:100%;border:0px;padding:0px;margin:0px"></iframe>';
+*/
+foreground.innerHTML = '<iframe frameborder="0" id="ff__iframe" style="width:100%;height:100%;border:0px;padding:0px;margin:0px"></iframe>';
 document.body.appendChild(container);
 var msg = {
 title:document.title,
@@ -380,7 +381,11 @@ izuzak: changed from:
 
 */
 
-if (frames.length > document.getElementsByTagName('iframe').length) {
+if (document.getElementsByTagName('head').length == 0) {
+  document.body.parentNode.appendChild(document.createElement("head"));
+}
+
+if (document.getElementsByTagName('head').length == 0 || frames.length > document.getElementsByTagName('iframe').length) {
 window.location.href = 'http://friendfeed.com/?link=' + escape(window.location.href);
 } else {
 bookmarklet();
