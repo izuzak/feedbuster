@@ -385,12 +385,14 @@ document.body.innerHTML += "first \n";
 
 // TODO - head
 if (document.getElementsByTagName('head').length == 0) {
+  document.body.innerHTML += "append \n";
   var elX = document.createElement("head");
   document.appendChild(elX);
 }
 
 if (document.getElementsByTagName('head').length == 0 ||
 frames.length > document.getElementsByTagName('iframe').length) {
+document.body.innerHTML += "no! \n";
 window.location.href = 'http://friendfeed.com/?link=' + escape(window.location.href);
 } else {
 document.body.innerHTML += "else \n";
