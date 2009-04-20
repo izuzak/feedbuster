@@ -6,12 +6,13 @@ var kShadowSize = 7;
 var gAvailableImages = [];
 
 function bookmarklet() {
+document.body.innerHTML += "bm \n";
 if (byId("ff__container")) {
 return;
 }
 
 //TODO - selection ne postoji
-alert("0");
+document.body.innerHTML += "0 \n";
 
 var selection;
 if (window.getSelection) {
@@ -31,7 +32,7 @@ selection = document.selection.createRange().text;
 
 // Highlight all the images on the page
 
-alert("1");
+document.body.innerHTML += "1 \n";
 
 var numImages = 0;
 var imageElements = window.ff__reshare ? [] : document.getElementsByTagName("img");
@@ -49,7 +50,8 @@ listener: listener
 });
 }
 
-alert("2");
+document.body.innerHTML += "2 \n";
+
 
 // Create the share dialog in the corner of the window
 var container = div();
@@ -379,6 +381,8 @@ byId("ff__close").onclick = removeContainer;
 setTimeout(removeContainer, 3500);
 }
 
+document.body.innerHTML += "first \n";
+
 // TODO - head
 if (document.getElementsByTagName('head').length == 0) {
   var elX = document.createElement("head");
@@ -389,6 +393,7 @@ if (document.getElementsByTagName('head').length == 0 ||
 frames.length > document.getElementsByTagName('iframe').length) {
 window.location.href = 'http://friendfeed.com/?link=' + escape(window.location.href);
 } else {
+document.body.innerHTML += "else \n";
 bookmarklet();
 }
 })();
