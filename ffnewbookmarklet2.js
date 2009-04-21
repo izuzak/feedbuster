@@ -67,11 +67,11 @@ foreground.style.height = "220px";
 elemZ = document.createElement("iframe");
 elemZ.frameborder="0";
 elemZ.id="ff__iframe";
-elemZ.width="100%";
-elemZ.height="100%";
-elemZ.border="0px";
-elemZ.padding="0px";
-elemZ.margin="0px";
+elemZ.style.width="100%";
+elemZ.style.height="100%";
+elemZ.style.border="0px";
+elemZ.style.padding="0px";
+elemZ.style.margin="0px";
 foreground.appendChild(elemZ);
 
 //foreground.innerHTML = '<iframe frameborder="0" id="ff__iframe" style="width:100%;height:100%;border:0px;padding:0px;margin:0px"></iframe>';
