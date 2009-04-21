@@ -184,6 +184,7 @@ clickE2.style.color="#1030cc";
 clickE2.style.border="1px solid #1030cc";
 clickE2.style.borderWidth="0px 1px 1px 0px";
 clickE2.style.zIndex=2;
+clickE2.innerHTML='Share image on FriendFeed';
 
 clickTarget.appendChild(clickElem);
 clickTarget.appendChild(clickE2);
