@@ -170,7 +170,7 @@ clickElem.style.height="100%";
 clickElem.style.position="relative";
 clickElem.style.zIndex=1;
 clickElem.style.backgroundColor="white";
-clickElem.style.filters.alpha.opacity=1;
+clickElem.style.filters="alpha(opacity=1)";
 clickElem.style.opacity=0.01;
 
 clickE2 = document.createElement("div");
