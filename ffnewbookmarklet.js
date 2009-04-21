@@ -64,7 +64,13 @@ foreground.style.zIndex = 2;
 foreground.style.width = "450px";
 foreground.style.height = "220px";
 
-foreground.innerHTML = '<iframe src="about:blank" frameborder="0" id="ff__iframe" style="width:100%;height:100%;border:0px;padding:0px;margin:0px"></iframe>';
+elemZ = document.createElement("iframe");
+elemZ.frameborder="0";
+elemZ.id="ff__iframe";
+//elemZ.style="width:100%;height:100%;border:0px;padding:0px;margin:0px";
+foreground.appendChild(elemZ);
+
+//foreground.innerHTML = '<iframe frameborder="0" id="ff__iframe" style="width:100%;height:100%;border:0px;padding:0px;margin:0px"></iframe>';
 document.body.appendChild(container);
 var msg = {
 title:document.title,
