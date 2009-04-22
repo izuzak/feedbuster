@@ -425,7 +425,7 @@ if (document.getElementsByTagName('head').length == 0 || frames.length > documen
 window.location.href = 'http://friendfeed.com/?link=' + escape(window.location.href);
 } else {
 bookmarklet();
-image=document.getElementsByTagName("img")[0];
-sendFrameMessage({image:image.src, w:image.width, h:image.height});
+//image=document.getElementsByTagName("img")[0];
+//sendFrameMessage({image:image.src, w:image.width, h:image.height});
 }
 })();
