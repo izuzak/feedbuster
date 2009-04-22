@@ -67,11 +67,11 @@ foreground.style.height = "220px";
 elemZ = document.createElement("iframe");
 elemZ.frameborder="0";
 elemZ.id="ff__iframe";
-elemZ.width="100%";
-elemZ.height="100%";
-elemZ.border="0px";
-elemZ.padding="0px";
-elemZ.margin="0px";
+elemZ.style.width="100%";
+elemZ.style.height="100%";
+elemZ.style.border="0px";
+elemZ.style.padding="0px";
+elemZ.style.margin="0px";
 foreground.appendChild(elemZ);
 
 //foreground.innerHTML = '<iframe frameborder="0" id="ff__iframe" style="width:100%;height:100%;border:0px;padding:0px;margin:0px"></iframe>';
@@ -161,7 +161,39 @@ clickTarget.style.width = image.width + "px";
 clickTarget.style.height = image.height + "px";
 clickTarget.style.border = kOutlineSize + "px solid " + kOutlineColor;
 clickTarget.style.cursor = "pointer";
-clickTarget.innerHTML = '<div style="margin:0;padding:0;width:100%;height:100%;position:relative;z-index:1;background-color:white;filter:alpha(opacity=1);opacity: 0.01"></div><div style="margin:0;position:absolute;top:0;left:0;background-color:white;padding:3px;color:#1030cc;border: 1px solid #1030cc;border-width: 0px 1px 1px 0px;z-index:2">' + 'Share image on FriendFeed' + '</div>';
+
+clickElem = document.createElement("div");
+clickElem.style.margin="0";
+clickElem.style.padding="0";
+clickElem.style.width="100%";
+clickElem.style.height="100%";
+clickElem.style.position="relative";
+clickElem.style.zIndex=1;
+clickElem.style.backgroundColor="white";
+clickElem.style.filters="alpha(opacity=1)";
+clickElem.style.opacity=0.01;
+
+clickE2 = document.createElement("div");
+clickE2.style.margin="0";
+clickE2.style.position="absolute";
+clickE2.style.top="0";
+clickE2.style.left="0";
+clickE2.style.backgroundColor="white";
+clickE2.style.padding="3px";
+clickE2.style.color="#1030cc";
+clickE2.style.border="1px solid #1030cc";
+clickE2.style.borderWidth="0px 1px 1px 0px";
+clickE2.style.zIndex=2;
+
+clickText = document.createTextNode('Share image on FriendFeed');
+clickE2.appendChild(clickText);
+
+clickTarget.appendChild(clickElem);
+clickTarget.appendChild(clickE2);
+
+
+//clickTarget.innerHTML = '<div style="margin:0;padding:0;width:100%;height:100%;position:relative;z-index:1;background-color:white;filter:alpha(opacity=1);opacity: 0.01"></div>
+//<div style="margin:0;position:absolute;top:0;left:0;background-color:white;padding:3px;color:#1030cc;border: 1px solid #1030cc;border-width: 0px 1px 1px 0px;z-index:2">' + 'Share image on FriendFeed' + '</div>';
 addEventListener(clickTarget, "click", curry(onImageClick, image));
 addEventListener(clickTarget, "mouseout", onHoverMouseOut);
 popupContainer.style.display = "";
@@ -393,5 +425,7 @@ if (document.getElementsByTagName('head').length == 0 || frames.length > documen
 window.location.href = 'http://friendfeed.com/?link=' + escape(window.location.href);
 } else {
 bookmarklet();
+//image=document.getElementsByTagName("img")[0];
+//sendFrameMessage({image:image.src, w:image.width, h:image.height});
 }
 })();
