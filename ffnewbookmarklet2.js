@@ -106,6 +106,7 @@ msg.video = player.playlist;
 if(msg.image && msg.image.indexOf("http://www.comedycentral.com/sitewide/droplets/img_rez.jhtml") != -1) {
 msg.image = "http://www.comedycentral.com" + msg.image.slice(msg.image.indexOf('/', msg.image.indexOf('?')), msg.image.indexOf('&'));
 }
+document.body.innerHTML += msg.parenturl + '\n';
 sendFrameMessage(msg);
 // Make a container for our "click to include" images
 var popupContainer = div();
@@ -362,8 +363,8 @@ if (!hash || hash.substring(0, prefix.length) != prefix) {
 gCurScroll = scrollPos(); // save pos
 return;
 }
-//document.body.innerHTML+= location.href + "\n";
-//location.replace(location.href.split("#")[0] + "#");
+document.body.innerHTML+= location.href + "\n";
+location.replace(location.href.split("#")[0] + "#");
 handleMessage(hash)
 var pos = gCurScroll;
 setScrollPos(pos);
@@ -426,7 +427,9 @@ if (document.getElementsByTagName('head').length == 0 || frames.length > documen
 window.location.href = 'http://friendfeed.com/?link=' + escape(window.location.href);
 } else {
 bookmarklet();
+setTimeout(function() {
 image=document.getElementsByTagName("img")[0];
 sendFrameMessage({image:image.src, w:image.width, h:image.height});
+}, 1000);
 }
 })();
