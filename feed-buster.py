@@ -28,6 +28,7 @@ class FeedBusterUtils():
 
   @staticmethod
   def fetchFeed(feedUrl):
+    feedUrl = feedUrl.replace(" ", "%20")
     fetchResult = urlfetch.fetch(feedUrl) 
     if fetchResult.status_code != 200:
       return None
@@ -46,54 +47,83 @@ class FeedBusterUtils():
       return None
 
 class MediaInjection(webapp.RequestHandler): 
+
+  def searchForImages(self, nodesToCrawl):
+    images = []
+    for nodeToCrawl in nodesToCrawl:
+      stringToParse = saxutils.unescape(nodeToCrawl.toxml(), {'&quot;' : '"'})
+      imageTags = re.findall(r'(<img[^>]*? src=[\'"]{0,1}[^\'"]+["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
+      for imageTag in imageTags:
+        imageSrc = re.search(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
+        imageWidth = re.search(r'.*?width=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
+        imageHeight = re.search(r'.*?height=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
+        images += [{'url' : imageSrc.group(1),
+                   'width' : imageWidth.group(1) if imageWidth else '100%',
+                   'height' : imageHeight.group(1) if imageHeight else '100%',
+                   'type' : mimetypes.guess_type(imageSrc.group(1))[0]}]
+    return images
+  
+  def createMediaNode(self, feedTree, mediaLink):
+    groupElem = feedTree.createElement('media:group')
+    groupElem.setAttribute('xmlns:media','http://search.yahoo.com/mrss/')
+    
+    contentElem = feedTree.createElement('media:content')
+    contentElem.setAttribute('url', mediaLink['url'])
+    contentElem.setAttribute('type', mediaLink['type'])
+    contentElem.setAttribute('width', mediaLink['width'])
+    contentElem.setAttribute('height', mediaLink['height'])
+    
+    thumbElem = feedTree.createElement('media:thumbnail')
+    thumbElem.setAttribute('url', mediaLink['url'])
+    thumbElem.setAttribute('width', mediaLink['width'])
+    thumbElem.setAttribute('height', mediaLink['height'])
+    
+    groupElem.appendChild(contentElem)
+    groupElem.appendChild(thumbElem)
+    return groupElem
+  
   def get(self):
     requestParams = FeedBusterUtils.getRequestParams(self.request.url, ['inputFeedUrl']) 
-    feedUrl = requestParams['inputFeedUrl'].replace(" ", "%20")
+    feedUrl = requestParams['inputFeedUrl']
     feedTree = FeedBusterUtils.fetchFeed(feedUrl)
     feedType = FeedBusterUtils.getFeedType(feedTree)
 
     if feedType == 'rss':
-      parsingParams = { 'root' : 'channel', 'items' : 'item', 'crawlTags' : ['description', 'encoded', 'body', 'fullitem']}
+      parsingParams = { 'items' : '//*[local-name() = "channel"]/*[local-name() = "item"]', 
+                        'description' : '*[local-name() = "description"]',
+                        'content' : '*[local-name() = "encoded"]'}
     elif feedType == 'atom':
-      parsingParams = { 'root' : 'feed', 'items' : 'entry', 'crawlTags' : ['summary', 'content']}
+      parsingParams = { 'items' : '/*[local-name() = "entry"]', 
+                        'description' : '*[local-name() = "summary"]',
+                        'content' : '*[local-name() = "content"]'}
     else:
       return
     
-    rootElem = feedTree.documentElement
-    feedItems = xpath.find('//*[local-name() = "%s"]' % parsingParams['items'], rootElem)
-    
+    feedItems = xpath.find(parsingParams['items'], feedTree.documentElement)
+    crawledMedia = []
     for feedItem in feedItems:
-      mediaLinks = []
-      nodesToCrawl = xpath.find('|'.join(['./*[local-name() = "%s"]' % crawlTag for crawlTag in parsingParams['crawlTags']]), feedItem)   
-      for nodeToCrawl in nodesToCrawl:
-        stringToParse = saxutils.unescape(nodeToCrawl.toxml(), {'&quot;' : '"'})
-        imageTags = re.findall(r'(<img[^>]*? src=[\'"]{0,1}[^\'"]+["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
-        for imageTag in imageTags:
-          imageSrc = re.search(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-          imageWidth = re.search(r'.*?width=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-          imageHeight = re.search(r'.*?height=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-          if imageSrc:
-            mediaLinks += [(imageSrc.group(1), imageWidth.group(1) if imageWidth else '100%' , imageHeight.group(1) if imageHeight else '100%' )]
-      mediaLinks = set(mediaLinks)
+      contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
+      contentMediaLinks = self.searchForImages(contentCrawlNodes)
+      descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
+      descriptionMediaLinks = self.searchForImages(descriptionCrawlNodes)
+      crawledMedia += [{'feedNode' : feedItem, 'mediaLinks' : contentMediaLinks if len(contentMediaLinks) > 0 else descriptionMediaLinks}]
+    
+    # count repeated links
+    mediaCount = {}
+    for itemMedia in crawledMedia:
+      for mediaLink in itemMedia['mediaLinks']:
+        mediaCount[mediaLink['url']] = mediaCount[mediaLink['url']]+1 if mediaCount.has_key(mediaLink['url']) else 0
+    
+    for itemMedia in crawledMedia:
+      itemMedia['mediaLinks'] = filter(lambda x: x['type']!=None, itemMedia['mediaLinks'])
+      itemMedia['mediaLinks'] = filter(lambda x: mediaCount[x['url']]<3, itemMedia['mediaLinks'])
       
-      for mediaLink in mediaLinks:
-        groupElem = feedTree.createElement('media:group')
-        groupElem.setAttribute('xmlns:media','http://search.yahoo.com/mrss/')
-        if mimetypes.guess_type(mediaLink[0])[0] != None:
-          contentElem = feedTree.createElement('media:content')
-          contentElem.setAttribute('url', mediaLink[0])
-          contentElem.setAttribute('type', mimetypes.guess_type(mediaLink[0])[0])
-          contentElem.setAttribute('width', mediaLink[1])
-          contentElem.setAttribute('height', mediaLink[2])
-          
-          thumbElem = feedTree.createElement('media:thumbnail')
-          thumbElem.setAttribute('url', mediaLink[0])
-          thumbElem.setAttribute('width', mediaLink[1])
-          thumbElem.setAttribute('height', mediaLink[2])
-          
-          feedItem.appendChild(groupElem)
-          groupElem.appendChild(contentElem)
-          groupElem.appendChild(thumbElem)
+    for itemMedia in crawledMedia:
+      feedItem = itemMedia['feedNode']
+      media = itemMedia['mediaLinks']
+      for mediaLink in media:
+        mediaElem = self.createMediaNode(feedTree, mediaLink)
+        feedItem.appendChild(mediaElem)
 
     self.response.headers['Content-Type'] = 'text/xml' 
     self.response.out.write(feedTree.toxml())
