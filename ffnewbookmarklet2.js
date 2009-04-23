@@ -357,13 +357,13 @@ iframe.location = url; // safari
 var gCurScroll = scrollPos();
 function checkForFrameMessage() {
 var prefix = "FFSHARE-";
-document.body.innerHTML+= location.href + "\n";
 var hash = location.href.split('#')[1]; // location.hash is decoded
 if (!hash || hash.substring(0, prefix.length) != prefix) {
 gCurScroll = scrollPos(); // save pos
 return;
 }
-location.replace(location.href.split("#")[0] + "#");
+//document.body.innerHTML+= location.href + "\n";
+//location.replace(location.href.split("#")[0] + "#");
 handleMessage(hash)
 var pos = gCurScroll;
 setScrollPos(pos);
