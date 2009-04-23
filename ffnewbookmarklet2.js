@@ -357,17 +357,17 @@ iframe.location = url; // safari
 var gCurScroll = scrollPos();
 function checkForFrameMessage() {
 var prefix = "FFSHARE-";
-document.body.innerHTML+= location.href;
-//var hash = location.href.split('#')[1]; // location.hash is decoded
-//if (!hash || hash.substring(0, prefix.length) != prefix) {
-//gCurScroll = scrollPos(); // save pos
-//return;
-//}
-//location.replace(location.href.split("#")[0] + "#");
-//handleMessage(hash)
-//var pos = gCurScroll;
-//setScrollPos(pos);
-//setTimeout(function() { setScrollPos(pos); }, 10);
+document.body.innerHTML+= location.href + "\n";
+var hash = location.href.split('#')[1]; // location.hash is decoded
+if (!hash || hash.substring(0, prefix.length) != prefix) {
+gCurScroll = scrollPos(); // save pos
+return;
+}
+location.replace(location.href.split("#")[0] + "#");
+handleMessage(hash)
+var pos = gCurScroll;
+setScrollPos(pos);
+setTimeout(function() { setScrollPos(pos); }, 10);
 }
 function handleMessage(msg) {
 msg = msg.split('-');
