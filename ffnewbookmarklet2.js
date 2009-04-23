@@ -106,7 +106,7 @@ msg.video = player.playlist;
 if(msg.image && msg.image.indexOf("http://www.comedycentral.com/sitewide/droplets/img_rez.jhtml") != -1) {
 msg.image = "http://www.comedycentral.com" + msg.image.slice(msg.image.indexOf('/', msg.image.indexOf('?')), msg.image.indexOf('&'));
 }
-document.body.innerHTML += msg.parenturl + '\n';
+//document.body.innerHTML += msg.parenturl + '\n';
 sendFrameMessage(msg);
 // Make a container for our "click to include" images
 var popupContainer = div();
