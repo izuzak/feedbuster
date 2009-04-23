@@ -363,7 +363,6 @@ if (!hash || hash.substring(0, prefix.length) != prefix) {
 gCurScroll = scrollPos(); // save pos
 return;
 }
-document.body.innerHTML+= location.href + "\n";
 location.replace(location.href.split("#")[0] + "#");
 handleMessage(hash)
 var pos = gCurScroll;
