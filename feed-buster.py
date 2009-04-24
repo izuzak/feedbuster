@@ -48,10 +48,20 @@ class FeedBusterUtils():
 
 class MediaInjection(webapp.RequestHandler): 
 
-  def searchForImages(self, nodesToCrawl):
+  def searchForMedia(self, nodesToCrawl):
+	  media = []
     images = []
+		audio = []
+		video = []
     for nodeToCrawl in nodesToCrawl:
       stringToParse = saxutils.unescape(nodeToCrawl.toxml(), {'&quot;' : '"'})
+			#audio
+			#video
+			# <media:group> 
+			# <media:content url="http://www.youtube.com/v/UcU1OsDMWBQ" type="application/x-shockwave-flash" width="" height=""/> 
+			# <media:thumbnail url="http://img.youtube.com/vi/UcU1OsDMWBQ/2.jpg" width="130" height="97"/> 
+			# </media:group> 
+			# images
       imageTags = re.findall(r'(<img[^>]*? src=[\'"]{0,1}[^\'"]+["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
       for imageTag in imageTags:
         imageSrc = re.search(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
@@ -62,7 +72,7 @@ class MediaInjection(webapp.RequestHandler):
                    'height' : imageHeight.group(1) if imageHeight else '100%',
                    'type' : mimetypes.guess_type(imageSrc.group(1))[0]}]
     return images
-  
+	
   def createMediaNode(self, feedTree, mediaLink):
     groupElem = feedTree.createElement('media:group')
     groupElem.setAttribute('xmlns:media','http://search.yahoo.com/mrss/')
@@ -103,9 +113,9 @@ class MediaInjection(webapp.RequestHandler):
     crawledMedia = []
     for feedItem in feedItems:
       contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
-      contentMediaLinks = self.searchForImages(contentCrawlNodes)
+      contentMediaLinks = self.searchForMedia(contentCrawlNodes)
       descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
-      descriptionMediaLinks = self.searchForImages(descriptionCrawlNodes)
+      descriptionMediaLinks = self.searchForMedia(descriptionCrawlNodes)
       crawledMedia += [{'feedNode' : feedItem, 'mediaLinks' : contentMediaLinks if len(contentMediaLinks) > 0 else descriptionMediaLinks}]
     
     # count repeated links
