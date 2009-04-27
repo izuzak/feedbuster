@@ -28,14 +28,19 @@ class FeedBusterUtils():
     return dict((param[0], urllib.unquote(requestUrl[param[1]:param[2]])) for param in paramIndexes)
 
   @staticmethod
-  def fetchFeed(feedUrl):
-    feedUrl = feedUrl.replace(" ", "%20")
-    fetchResult = urlfetch.fetch(feedUrl) 
-    if fetchResult.status_code != 200:
+  def fetchContent(contentUrl):
+    contentUrl = contentUrl.replace(" ", "%20")
+    fetchResult = urlfetch.fetch(contentUrl) 
+    if fetchResult.status_code == 500:
       return None
-    feedXMLString = fetchResult.content
-    return minidom.parseString(feedXMLString)
-    
+    contentString = fetchResult.content
+    return contentString
+  
+  @staticmethod
+  def fetchContentDOM(contentUrl):
+    contentString = FeedBusterUtils.fetchContent(contentUrl)
+    return minidom.parseString(contentString)
+  
   @staticmethod
   def getFeedType(feedTree):
     rootElem = feedTree.documentElement
@@ -49,10 +54,22 @@ class FeedBusterUtils():
 
 class MediaInjection(webapp.RequestHandler): 
 
+  def getImageProperties(self, imageUrl):
+    # invoke IMG·2·JSON AppEngine Service
+    serviceCallUrl = 'http://img2json.appspot.com/go/?url='+imageUrl
+    serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
+    from StringIO import StringIO
+    imageInfo = simplejson.load(StringIO(serviceResultJson)) if serviceResultJson != None else None
+    if (not(imageInfo) or imageInfo.has_key('error')):
+      return { 'width' : '175', 'height' : '175', 'mimeType' : None }
+    else:
+      return imageInfo
+
   def searchForMediaString(self, stringToParse):
     images = []
     audios = []
     videos = []
+		
     #audio
     audioTags = re.findall(r'(<a[^>]*? href=[\'"]{0,1}[^\'"]+\.mp3["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
     for audioTag in audioTags:
@@ -67,7 +84,7 @@ class MediaInjection(webapp.RequestHandler):
       videoId = videoId.group(1)
       videos += [{'mediaType' : 'vid',
                   'url' : 'http://vimeo.com/moogaloop.swf?clip_id=' + videoId,
-                  'thumb' : 'http://friendfeed.com/static/images/film.png?v=d0719a0e04c5eafb9ab6895204fc5b0d',
+                  'thumb' : 'http://friendfeed.com/static/images/film.png?v=d0719a0e04c5eafb9ab6895204fc5b0d', #TODO: fetch thumb from vimeo api
                   'thumbWidth' : '130',
                   'thumbHeight' : '97',
                   'type' : 'application/x-shockwave-flash'}]
@@ -82,17 +99,31 @@ class MediaInjection(webapp.RequestHandler):
                   'thumbWidth' : '130',
                   'thumbHeight' : '97',
                   'type' : 'application/x-shockwave-flash'}]
+		
+		# TODO: video - flickr
+		#<object type="application/x-shockwave-flash" width="500" height="375" data="http://www.flickr.com/apps/video/stewart.swf?v=71377" classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000">
+		#	<param name="flashvars" value="intl_lang=en-us&#038;photo_secret=0cd85ca6c8&#038;photo_id=3473039350"></param>
+		#	<param name="movie" value="http://www.flickr.com/apps/video/stewart.swf?v=71377"></param>
+		#	<param name="bgcolor" value="#000000"></param><param name="allowFullScreen" value="true"></param>
+		#	<embed type="application/x-shockwave-flash" src="http://www.flickr.com/apps/video/stewart.swf?v=71377" bgcolor="#000000" allowfullscreen="true" flashvars="intl_lang=en-us&#038;photo_secret=0cd85ca6c8&#038;photo_id=3473039350" height="375" width="500"></embed>
+		# </object>
+		
     # images
     imageTags = re.findall(r'(<img[^>]*?\ssrc=[\'"]{0,1}[^\'"]+["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
     for imageTag in imageTags:
-      imageSrc = re.search(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
+      imageSrc = re.search(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE).group(1)
+      self.response.out.write(str(self.getImageProperties(imageSrc)))
+      return []
       imageWidth = re.search(r'.*?width=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
+      imageWidth = imageWidth.group(1) if imageWidth else self.getImageProperties(imageSrc)['width']
+      
       imageHeight = re.search(r'.*?height=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-      images += [{'mediaType' : 'img',
-                  'url' : imageSrc.group(1),
-                  'width' : imageWidth.group(1) if imageWidth else '175',
-                  'height' : imageHeight.group(1) if imageHeight else '175',
-                  'type' : mimetypes.guess_type(imageSrc.group(1))[0]}]
+      imageHeight = imageHeight.group(1) if imageHeight else self.getImageProperties(imageSrc)['height']
+      
+      imageType = mimetypes.guess_type(imageSrc)[0]
+      imageType = mimetypes.guess_type(imageSrc)[0] if imageType else None # self.getImageProperties(imageSrc)['mimeType']
+
+      images += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
     return images+videos+audios
     
   def searchForMediaDOM(self, nodesToCrawl):
@@ -154,6 +185,7 @@ class MediaInjection(webapp.RequestHandler):
       return None
     
   def isSmallImage(self, mediaItem):
+    #self.response.out.write(str(mediaItem))
     if mediaItem['mediaType']=='img':
       if mediaItem.has_key('width') and mediaItem.has_key('height'):
         if int(mediaItem['width'].replace("%", "")) < 15 or int(mediaItem['height'].replace("%", "")) < 15:
@@ -168,7 +200,7 @@ class MediaInjection(webapp.RequestHandler):
     requestParams = FeedBusterUtils.getRequestParams(self.request.url, ['inputFeedUrl', 'linkScrapeXpath']) 
     feedUrl = requestParams['inputFeedUrl']
     linkScrapeXpath = requestParams['linkScrapeXpath'] if requestParams.has_key('linkScrapeXpath') else None
-    feedTree = FeedBusterUtils.fetchFeed(feedUrl)
+    feedTree = FeedBusterUtils.fetchContentDOM(feedUrl)
     feedType = FeedBusterUtils.getFeedType(feedTree)
 
     if feedType == 'rss':
@@ -183,31 +215,29 @@ class MediaInjection(webapp.RequestHandler):
                         'content' : '*[local-name() = "content"]'}
     else:
       return
-
+	  
+		# crawl feed or web post
     feedItems = xpath.find(parsingParams['items'], feedTree.documentElement)
     crawledMedia = []
     for feedItem in feedItems:
       if linkScrapeXpath:
-        linkNode = xpath.find(parsingParams['link'], feedItem)[0]
-        linkUrl = linkNode.nodeValue
-        linkUrl = urllib.unquote(linkUrl).replace(" ", "%20")
-        linkResult = urlfetch.fetch(linkUrl) 
-        if linkResult.status_code != 200:
-          return None
-        linkResultString = linkResult.content
-        scrapedMediaLinks = self.searchForMediaString(linkResultString)
-        crawledMedia += [{'feedNode' : feedItem, 'mediaLinks' : scrapedMediaLinks}]
+        linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
+        linkResultString = FeedBusterUtils.fetchContent(linkUrl)
+        scrapedMediaLinks = self.searchForMediaString(linkResultString, linkScrapeXpath)
       else:
         contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
-        contentMediaLinks = self.searchForMediaDOM(contentCrawlNodes)
-        descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
-        descriptionMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
-        crawledMedia += [{'feedNode' : feedItem, 'mediaLinks' : contentMediaLinks if len(contentMediaLinks) > 0 else descriptionMediaLinks}]
+        scrapedMediaLinks = self.searchForMediaDOM(contentCrawlNodes)
+        if len(scrapedMediaLinks) == 0:
+          descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
+          scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
+      crawledMedia += [{'feedNode' : feedItem, 'mediaLinks' : scrapedMediaLinks}]
+    
     # count repeated links
     mediaCount = {}
     for itemMedia in crawledMedia:
       for mediaLink in itemMedia['mediaLinks']:
         mediaCount[mediaLink['url']] = mediaCount[mediaLink['url']]+1 if mediaCount.has_key(mediaLink['url']) else 0
+    
     # filters 
     for itemMedia in crawledMedia:
       # nonidentified media
@@ -216,14 +246,18 @@ class MediaInjection(webapp.RequestHandler):
       itemMedia['mediaLinks'] = filter(lambda x: mediaCount[x['url']]<3, itemMedia['mediaLinks'])
       # small images
       itemMedia['mediaLinks'] = filter(self.isSmallImage, itemMedia['mediaLinks'])
+    
+    #generate media enclosure XML elements
     for itemMedia in crawledMedia:
       feedItem = itemMedia['feedNode']
       media = itemMedia['mediaLinks']
       for mediaLink in media:
         mediaElem = self.createMediaNode(feedTree, mediaLink)
         feedItem.appendChild(mediaElem)
-    self.response.headers['Content-Type'] = 'text/xml' 
-    self.response.out.write(feedTree.toxml())
+	  
+		# write output feed
+    #self.response.headers['Content-Type'] = 'text/xml' 
+    #self.response.out.write(feedTree.toxml())
     return
       
 application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection)], debug=True)
