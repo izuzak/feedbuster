@@ -31,7 +31,7 @@ class FeedBusterUtils():
   def fetchContent(contentUrl):
     contentUrl = contentUrl.replace(" ", "%20")
     fetchResult = urlfetch.fetch(contentUrl) 
-    if fetchResult.status_code == 500:
+    if fetchResult.status_code != 200:
       return None
     contentString = fetchResult.content
     return contentString
@@ -55,17 +55,23 @@ class FeedBusterUtils():
 class MediaInjection(webapp.RequestHandler): 
 
   def getImageProperties(self, imageUrl):
-    # invoke IMG·2·JSON AppEngine Service
-    serviceCallUrl = 'http://img2json.appspot.com/go/?url='+imageUrl
-    serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
-    from StringIO import StringIO
-    imageInfo = simplejson.load(StringIO(serviceResultJson)) if serviceResultJson != None else None
-    if (not(imageInfo) or imageInfo.has_key('error')):
-      return { 'width' : '175', 'height' : '175', 'mimeType' : None }
-    else:
-      return imageInfo
+    # check memcached
+    imageInfo = memcache.get(imageUrl)
+    
+    # invoke IMG2JSON AppEngine Service
+    if imageInfo is None:
+      serviceCallUrl = 'http://img2json.appspot.com/go/?url='+imageUrl
+      serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
+      imageInfo = simplejson.loads(serviceResultJson.replace("'",'"').replace(";","")) if serviceResultJson else None
+      imageInfo = imageInfo if not(imageInfo) or imageInfo.has_key('error')
+      
+    if (imageInfo is None):
+      imageInfo = { 'width' : '175', 'height' : '175', 'mimeType' : None } #todo mimetype info
+      
+    data = memcache.set(imageUrl, imageInfo, 3600*12)
+    return imageInfo
 
-  def searchForMediaString(self, stringToParse):
+  def searchForMediaString(self, stringToParse, xpathExpr):
     images = []
     audios = []
     videos = []
@@ -112,17 +118,17 @@ class MediaInjection(webapp.RequestHandler):
     imageTags = re.findall(r'(<img[^>]*?\ssrc=[\'"]{0,1}[^\'"]+["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
     for imageTag in imageTags:
       imageSrc = re.search(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE).group(1)
-      self.response.out.write(str(self.getImageProperties(imageSrc)))
-      return []
-      imageWidth = re.search(r'.*?width=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-      imageWidth = imageWidth.group(1) if imageWidth else self.getImageProperties(imageSrc)['width']
-      
-      imageHeight = re.search(r'.*?height=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-      imageHeight = imageHeight.group(1) if imageHeight else self.getImageProperties(imageSrc)['height']
       
       imageType = mimetypes.guess_type(imageSrc)[0]
       imageType = mimetypes.guess_type(imageSrc)[0] if imageType else None # self.getImageProperties(imageSrc)['mimeType']
+      if not(imageType):
+        continue
+      imageWidth = re.search(r'.*?width=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
+      imageWidth = imageWidth.group(1) if imageWidth else str(self.getImageProperties(imageSrc)['width'])
 
+      imageHeight = re.search(r'.*?height=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
+      imageHeight = imageHeight.group(1) if imageHeight else str(self.getImageProperties(imageSrc)['height'])
+      
       images += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
     return images+videos+audios
     
@@ -222,7 +228,7 @@ class MediaInjection(webapp.RequestHandler):
     for feedItem in feedItems:
       if linkScrapeXpath:
         linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
-        linkResultString = FeedBusterUtils.fetchContent(linkUrl)
+        linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
         scrapedMediaLinks = self.searchForMediaString(linkResultString, linkScrapeXpath)
       else:
         contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
@@ -256,8 +262,8 @@ class MediaInjection(webapp.RequestHandler):
         feedItem.appendChild(mediaElem)
 	  
 		# write output feed
-    #self.response.headers['Content-Type'] = 'text/xml' 
-    #self.response.out.write(feedTree.toxml())
+    self.response.headers['Content-Type'] = 'text/xml' 
+    self.response.out.write(feedTree.toxml())
     return
       
 application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection)], debug=True)
