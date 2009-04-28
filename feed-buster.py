@@ -1,17 +1,16 @@
 import cgi
 import os
-
 import re
 import urllib
 import urlparse
 import mimetypes
-
 import xpath
+
 from xml.dom import minidom
 from xml.etree import ElementTree 
 from xml.sax import saxutils 
 from django.utils import simplejson 
-
+from google.appengine.api import memcache
 from google.appengine.api import urlfetch
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
@@ -64,12 +63,12 @@ class MediaInjection(webapp.RequestHandler):
       serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
       imageInfo = simplejson.loads(serviceResultJson.replace("'",'"').replace(";","")) if serviceResultJson else None
       imageInfo = imageInfo if not(imageInfo) or imageInfo.has_key('error')
-      
-    if (imageInfo is None):
-      imageInfo = { 'width' : '175', 'height' : '175', 'mimeType' : None } #todo mimetype info
-      
-    data = memcache.set(imageUrl, imageInfo, 3600*12)
+      imageInfo = { 'width' : imageInfo['width'], 'height' : imageInfo['height'], 'mimeType' : imageInfo['mimeType'] }
     return imageInfo
+    
+  def setImageProperties(self, imageUrl, imageInfo):
+    memcache.set(imageUrl, imageInfo, 3600*12)
+    return
 
   def searchForMediaString(self, stringToParse, xpathExpr):
     images = []
@@ -118,17 +117,20 @@ class MediaInjection(webapp.RequestHandler):
     imageTags = re.findall(r'(<img[^>]*?\ssrc=[\'"]{0,1}[^\'"]+["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
     for imageTag in imageTags:
       imageSrc = re.search(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE).group(1)
-      
       imageType = mimetypes.guess_type(imageSrc)[0]
-      imageType = mimetypes.guess_type(imageSrc)[0] if imageType else None # self.getImageProperties(imageSrc)['mimeType']
-      if not(imageType):
-        continue
       imageWidth = re.search(r'.*?width=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-      imageWidth = imageWidth.group(1) if imageWidth else str(self.getImageProperties(imageSrc)['width'])
-
       imageHeight = re.search(r'.*?height=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-      imageHeight = imageHeight.group(1) if imageHeight else str(self.getImageProperties(imageSrc)['height'])
       
+      if not(imageWidth) or not(imageHeight) or not(imageType):
+        imageProperties = self.getImageProperties(imageSrc)
+        imageWidth = imageProperties['width']
+        imageHeight = imageProperties['height']
+        imageType = imageProperties['mimeType']
+      else:
+        imageWidth = imageWidth.group(1)
+        imageHeight = imageHeight.group(1)
+      
+      self.setImageProperties(imageSrc, { 'width' : imageWidth, 'height' : imageHeight, 'mimeType' : imageType })
       images += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
     return images+videos+audios
     
@@ -191,7 +193,6 @@ class MediaInjection(webapp.RequestHandler):
       return None
     
   def isSmallImage(self, mediaItem):
-    #self.response.out.write(str(mediaItem))
     if mediaItem['mediaType']=='img':
       if mediaItem.has_key('width') and mediaItem.has_key('height'):
         if int(mediaItem['width'].replace("%", "")) < 15 or int(mediaItem['height'].replace("%", "")) < 15:
