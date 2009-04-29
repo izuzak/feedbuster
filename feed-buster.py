@@ -62,15 +62,17 @@ class MediaInjection(webapp.RequestHandler):
       serviceCallUrl = 'http://img2json.appspot.com/go/?url='+imageUrl
       serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
       imageInfo = simplejson.loads(serviceResultJson.replace("'",'"').replace(";","")) if serviceResultJson else None
-      imageInfo = imageInfo if not(imageInfo) or imageInfo.has_key('error')
-      imageInfo = { 'width' : imageInfo['width'], 'height' : imageInfo['height'], 'mimeType' : imageInfo['mimeType'] }
+      if imageInfo is None or imageInfo.has_key('error'):
+        imageInfo = None
+      else:
+        imageInfo = { 'width' : str(imageInfo['width']), 'height' : str(imageInfo['height']), 'mimeType' : imageInfo['mimeType'] }
     return imageInfo
     
   def setImageProperties(self, imageUrl, imageInfo):
-    memcache.set(imageUrl, imageInfo, 3600*12)
+    memcache.set(imageUrl, imageInfo, 3600*2)
     return
 
-  def searchForMediaString(self, stringToParse, xpathExpr):
+  def searchForMediaString(self, stringToParse):
     images = []
     audios = []
     videos = []
@@ -123,6 +125,8 @@ class MediaInjection(webapp.RequestHandler):
       
       if not(imageWidth) or not(imageHeight) or not(imageType):
         imageProperties = self.getImageProperties(imageSrc)
+        if not(imageProperties):
+          continue
         imageWidth = imageProperties['width']
         imageHeight = imageProperties['height']
         imageType = imageProperties['mimeType']
@@ -209,15 +213,22 @@ class MediaInjection(webapp.RequestHandler):
     linkScrapeXpath = requestParams['linkScrapeXpath'] if requestParams.has_key('linkScrapeXpath') else None
     feedTree = FeedBusterUtils.fetchContentDOM(feedUrl)
     feedType = FeedBusterUtils.getFeedType(feedTree)
-
+    
+    #todo - replace regex feed parsing with feedparser
     if feedType == 'rss':
       parsingParams = { 'items' : '//*[local-name() = "channel"]/*[local-name() = "item"]', 
                         'link' : '*[local-name() = "link"]/node()',
+                        'id' : '*[local-name() = "guid"]/node()',
+                        'updated' : '*[local-name() = "pubDate" or local-name() = "date" local-name() = "modified"]',
+                        'published' : 'issued',
                         'description' : '*[local-name() = "description"]',
                         'content' : '*[local-name() = "encoded"]'}
     elif feedType == 'atom':
       parsingParams = { 'items' : '//*[local-name() = "entry"]', 
                         'link' : '*[local-name() = "link" and (@rel="alternate" or not(@rel))]/@href',
+                        'id' : '*[local-name() = "id"]/node()',
+                        'updated' : '*[local-name() = "updated"]',
+                        'published' : 'published',
                         'description' : '*[local-name() = "summary"]',
                         'content' : '*[local-name() = "content"]'}
     else:
@@ -227,24 +238,35 @@ class MediaInjection(webapp.RequestHandler):
     feedItems = xpath.find(parsingParams['items'], feedTree.documentElement)
     crawledMedia = []
     for feedItem in feedItems:
+      itemId = xpath.find(parsingParams['id'], feedItem)[0].nodeValue
+      itemHash = hash(feedItem.toxml())
+      cacheId = feedUrl + '_' + itemId
+      #cachedMedia = memcache.get(cacheId)
+      #if cachedMedia and cachedMedia['itemHash'] == itemHash:
+      #  scrapedMediaLinks = cachedMedia['crawledMedia']
+      #else:
       if linkScrapeXpath:
         linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
         linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
-        scrapedMediaLinks = self.searchForMediaString(linkResultString, linkScrapeXpath)
+        scrapedMediaLinks = self.searchForMediaString(linkResultString)
       else:
         contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
         scrapedMediaLinks = self.searchForMediaDOM(contentCrawlNodes)
         if len(scrapedMediaLinks) == 0:
           descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
           scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
-      crawledMedia += [{'feedNode' : feedItem, 'mediaLinks' : scrapedMediaLinks}]
+      self.response.out.write(str(scrapedMediaLinks) +'\n\n\n\n')
+      #crawledMedia += [{'feedNode' : feedItem, 'mediaLinks' : scrapedMediaLinks}]
+      #memcache.set(cacheId, {'itemHash' : itemHash, 'crawledMedia' : scrapedMediaLinks})
     
+    #self.response.out.write(str(crawledMedia))
     # count repeated links
     mediaCount = {}
     for itemMedia in crawledMedia:
-      for mediaLink in itemMedia['mediaLinks']:
-        mediaCount[mediaLink['url']] = mediaCount[mediaLink['url']]+1 if mediaCount.has_key(mediaLink['url']) else 0
-    
+      self.response.out.write(str(itemMedia))
+      #for mediaLink in itemMedia['mediaLinks']:
+      #  mediaCount[mediaLink['url']] = mediaCount[mediaLink['url']]+1 if mediaCount.has_key(mediaLink['url']) else 0
+    return
     # filters 
     for itemMedia in crawledMedia:
       # nonidentified media
