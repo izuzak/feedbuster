@@ -6,3 +6,6 @@ api_version: 1
 handlers:
 - url: /mediaInjection(.*)
   script: feed-buster.py
+
+- url: /clearCache(.*)
+  script: feed-buster.py

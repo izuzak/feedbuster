@@ -50,6 +50,18 @@ class FeedBusterUtils():
       return "atom"
     else:
       return None
+  
+  @staticmethod
+  def storeData(key, data):
+    return memcache.set(key, data)
+  
+  @staticmethod
+  def getData(key):
+    return memcache.get(key)
+      
+class ClearCache(webapp.RequestHandler):
+  def get(self):
+    return str(memcache.flush_all())
 
 class MediaInjection(webapp.RequestHandler): 
 
@@ -122,7 +134,7 @@ class MediaInjection(webapp.RequestHandler):
       imageType = mimetypes.guess_type(imageSrc)[0]
       imageWidth = re.search(r'.*?width=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
       imageHeight = re.search(r'.*?height=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-      
+
       if not(imageWidth) or not(imageHeight) or not(imageType):
         imageProperties = self.getImageProperties(imageSrc)
         if not(imageProperties):
@@ -133,7 +145,7 @@ class MediaInjection(webapp.RequestHandler):
       else:
         imageWidth = imageWidth.group(1)
         imageHeight = imageHeight.group(1)
-      
+
       self.setImageProperties(imageSrc, { 'width' : imageWidth, 'height' : imageHeight, 'mimeType' : imageType })
       images += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
     return images+videos+audios
@@ -195,7 +207,10 @@ class MediaInjection(webapp.RequestHandler):
       return groupElem
     else:
       return None
-    
+  
+  def adsBlacklist(self, url):
+    return True
+
   def isSmallImage(self, mediaItem):
     if mediaItem['mediaType']=='img':
       if mediaItem.has_key('width') and mediaItem.has_key('height'):
@@ -208,16 +223,16 @@ class MediaInjection(webapp.RequestHandler):
     return True 
      
   def get(self):
-    requestParams = FeedBusterUtils.getRequestParams(self.request.url, ['inputFeedUrl', 'linkScrapeXpath']) 
+    requestParams = FeedBusterUtils.getRequestParams(self.request.url, ['inputFeedUrl', 'webScrape']) 
     feedUrl = requestParams['inputFeedUrl']
-    linkScrapeXpath = requestParams['linkScrapeXpath'] if requestParams.has_key('linkScrapeXpath') else None
+    webScrape = requestParams['webScrape'] if requestParams.has_key('webScrape') else None
     feedTree = FeedBusterUtils.fetchContentDOM(feedUrl)
     feedType = FeedBusterUtils.getFeedType(feedTree)
     
     #todo - replace regex feed parsing with feedparser
     if feedType == 'rss':
       parsingParams = { 'items' : '//*[local-name() = "channel"]/*[local-name() = "item"]', 
-                        'link' : '*[local-name() = "link"]/node()',
+                        'link' : '*[local-name() = "link" or local-name() = "origLink"]/node()',
                         'id' : '*[local-name() = "guid"]/node()',
                         'updated' : '*[local-name() = "pubDate" or local-name() = "date" local-name() = "modified"]',
                         'published' : 'issued',
@@ -240,33 +255,30 @@ class MediaInjection(webapp.RequestHandler):
     for feedItem in feedItems:
       itemId = xpath.find(parsingParams['id'], feedItem)[0].nodeValue
       itemHash = hash(feedItem.toxml())
-      cacheId = feedUrl + '_' + itemId
-      #cachedMedia = memcache.get(cacheId)
-      #if cachedMedia and cachedMedia['itemHash'] == itemHash:
-      #  scrapedMediaLinks = cachedMedia['crawledMedia']
-      #else:
-      if linkScrapeXpath:
-        linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
-        linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
-        scrapedMediaLinks = self.searchForMediaString(linkResultString)
+      cacheId = feedUrl + '_' + itemId + (('_' + webScrape) if webScrape else "")
+      cachedMedia = memcache.get(cacheId)
+      if cachedMedia and cachedMedia['itemHash'] == itemHash:
+        scrapedMediaLinks = cachedMedia['crawledMedia']
       else:
-        contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
-        scrapedMediaLinks = self.searchForMediaDOM(contentCrawlNodes)
-        if len(scrapedMediaLinks) == 0:
-          descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
-          scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
-      self.response.out.write(str(scrapedMediaLinks) +'\n\n\n\n')
-      #crawledMedia += [{'feedNode' : feedItem, 'mediaLinks' : scrapedMediaLinks}]
-      #memcache.set(cacheId, {'itemHash' : itemHash, 'crawledMedia' : scrapedMediaLinks})
+        if webScrape:
+          linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
+          self.response.out.write(linkNodeUrl)
+          linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
+          scrapedMediaLinks = self.searchForMediaString(linkResultString)
+        else:
+          contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
+          scrapedMediaLinks = self.searchForMediaDOM(contentCrawlNodes)
+          if len(scrapedMediaLinks) == 0:
+            descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
+            scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
+      crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId}]
     
-    #self.response.out.write(str(crawledMedia))
     # count repeated links
     mediaCount = {}
     for itemMedia in crawledMedia:
-      self.response.out.write(str(itemMedia))
-      #for mediaLink in itemMedia['mediaLinks']:
-      #  mediaCount[mediaLink['url']] = mediaCount[mediaLink['url']]+1 if mediaCount.has_key(mediaLink['url']) else 0
-    return
+      for mediaLink in itemMedia['mediaLinks']:
+        mediaCount[mediaLink['url']] = mediaCount[mediaLink['url']]+1 if mediaCount.has_key(mediaLink['url']) else 0
+    
     # filters 
     for itemMedia in crawledMedia:
       # nonidentified media
@@ -275,11 +287,14 @@ class MediaInjection(webapp.RequestHandler):
       itemMedia['mediaLinks'] = filter(lambda x: mediaCount[x['url']]<3, itemMedia['mediaLinks'])
       # small images
       itemMedia['mediaLinks'] = filter(self.isSmallImage, itemMedia['mediaLinks'])
-    
+      #ads
+      itemMedia['mediaLinks'] = filter(self.adsBlacklist, itemMedia['mediaLinks'])
+
     #generate media enclosure XML elements
     for itemMedia in crawledMedia:
       feedItem = itemMedia['feedNode']
       media = itemMedia['mediaLinks']
+      memcache.set(itemMedia['cacheId'], {'itemHash' : itemMedia['itemHash'], 'crawledMedia' : media})
       for mediaLink in media:
         mediaElem = self.createMediaNode(feedTree, mediaLink)
         feedItem.appendChild(mediaElem)
@@ -289,7 +304,7 @@ class MediaInjection(webapp.RequestHandler):
     self.response.out.write(feedTree.toxml())
     return
       
-application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection)], debug=True)
+application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection), ('/clearCache.*', ClearCache)], debug=True)
 
 def main():
   run_wsgi_app(application)
