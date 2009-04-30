@@ -253,7 +253,11 @@ class MediaInjection(webapp.RequestHandler):
     feedItems = xpath.find(parsingParams['items'], feedTree.documentElement)
     crawledMedia = []
     for feedItem in feedItems:
-      itemId = xpath.find(parsingParams['id'], feedItem)[0].nodeValue
+      itemId = xpath.find(parsingParams['id'], feedItem)
+      if not(itemId):
+        itemId = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
+      else:
+        itemId = itemId[0].nodeValue
       itemHash = hash(feedItem.toxml())
       cacheId = feedUrl + '_' + itemId + (('_' + webScrape) if webScrape else "")
       cachedMedia = memcache.get(cacheId)
