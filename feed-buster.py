@@ -67,8 +67,8 @@ class MediaInjection(webapp.RequestHandler):
 
   def getImageProperties(self, imageUrl):
     # check memcached
-    imageInfo = memcache.get(imageUrl)
-    
+    #imageInfo = memcache.get(imageUrl)
+    imageInfo=None
     # invoke IMG2JSON AppEngine Service
     if imageInfo is None:
       serviceCallUrl = 'http://img2json.appspot.com/go/?url='+imageUrl
@@ -133,8 +133,12 @@ class MediaInjection(webapp.RequestHandler):
       imageSrc = re.search(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE).group(1)
       imageType = mimetypes.guess_type(imageSrc)[0]
       imageWidth = re.search(r'.*?width=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
+      if not(imageWidth):
+        imageWidth = re.search(r'.*?style=[\'"]{0,1}[^\'"]*?width\s?:\s?(\d+)px[^\'"]*?["\'\s]{0,1}.*', imageTag, re.IGNORECASE)
       imageHeight = re.search(r'.*?height=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-
+      if not(imageHeight):
+        imageHeight = re.search(r'.*?style=[\'"]{0,1}[^\'"]*?height\s?:\s?(\d+)px[^\'"]*?["\'\s]{0,1}.*', imageTag, re.IGNORECASE)
+        
       if not(imageWidth) or not(imageHeight) or not(imageType):
         imageProperties = self.getImageProperties(imageSrc)
         if not(imageProperties):
@@ -146,7 +150,7 @@ class MediaInjection(webapp.RequestHandler):
         imageWidth = imageWidth.group(1)
         imageHeight = imageHeight.group(1)
 
-      self.setImageProperties(imageSrc, { 'width' : imageWidth, 'height' : imageHeight, 'mimeType' : imageType })
+      #self.setImageProperties(imageSrc, { 'width' : imageWidth, 'height' : imageHeight, 'mimeType' : imageType })
       images += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
     return images+videos+audios
     
@@ -214,7 +218,7 @@ class MediaInjection(webapp.RequestHandler):
   def isSmallImage(self, mediaItem):
     if mediaItem['mediaType']=='img':
       if mediaItem.has_key('width') and mediaItem.has_key('height'):
-        if int(mediaItem['width'].replace("%", "")) < 15 or int(mediaItem['height'].replace("%", "")) < 15:
+        if int(mediaItem['width'].replace("%", "")) <= 20 or int(mediaItem['height'].replace("%", "")) <= 20:
           return False
         else:
           return True
@@ -237,7 +241,8 @@ class MediaInjection(webapp.RequestHandler):
                         'updated' : '*[local-name() = "pubDate" or local-name() = "date" local-name() = "modified"]',
                         'published' : 'issued',
                         'description' : '*[local-name() = "description"]',
-                        'content' : '*[local-name() = "encoded"]'}
+                        'content' : '*[local-name() = "encoded"]',
+                        'existingMedia' : '*[(namespace-uri() = "http://search.yahoo.com/mrss/")and (local-name() = "thumbnail" or local-name() = "content" or local-name() = "group")]' }
     elif feedType == 'atom':
       parsingParams = { 'items' : '//*[local-name() = "entry"]', 
                         'link' : '*[local-name() = "link" and (@rel="alternate" or not(@rel))]/@href',
@@ -245,28 +250,33 @@ class MediaInjection(webapp.RequestHandler):
                         'updated' : '*[local-name() = "updated"]',
                         'published' : 'published',
                         'description' : '*[local-name() = "summary"]',
-                        'content' : '*[local-name() = "content"]'}
+                        'content' : '*[local-name() = "content"]',
+                        'existingMedia' : '*[(namespace-uri() = "http://search.yahoo.com/mrss/")and (local-name() = "thumbnail" or local-name() = "content" or local-name() = "group")]' }
     else:
       return
 	  
 		# crawl feed or web post
     feedItems = xpath.find(parsingParams['items'], feedTree.documentElement)
     crawledMedia = []
-    for feedItem in feedItems:
+
+    for feedItemIndex in range(len(feedItems)):
+      if feedItemIndex >= 15:
+        continue
+      feedItem = feedItems[feedItemIndex]
       itemId = xpath.find(parsingParams['id'], feedItem)
       if not(itemId):
         itemId = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
       else:
         itemId = itemId[0].nodeValue
       itemHash = hash(feedItem.toxml())
-      cacheId = feedUrl + '_' + itemId + (('_' + webScrape) if webScrape else "")
+      cacheId = itemId + (('_' + webScrape) if webScrape else "")
+      
       cachedMedia = memcache.get(cacheId)
       if cachedMedia and cachedMedia['itemHash'] == itemHash:
         scrapedMediaLinks = cachedMedia['crawledMedia']
       else:
         if webScrape:
           linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
-          self.response.out.write(linkNodeUrl)
           linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
           scrapedMediaLinks = self.searchForMediaString(linkResultString)
         else:
@@ -276,6 +286,9 @@ class MediaInjection(webapp.RequestHandler):
             descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
             scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
       crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId}]
+      existingMedia = xpath.find(parsingParams['existingMedia'], feedItem)
+      for existingMediaItem in existingMedia:
+        feedItem.removeChild(existingMediaItem)
     
     # count repeated links
     mediaCount = {}
@@ -304,7 +317,7 @@ class MediaInjection(webapp.RequestHandler):
         feedItem.appendChild(mediaElem)
 	  
 		# write output feed
-    self.response.headers['Content-Type'] = 'text/xml' 
+    self.response.headers['Content-Type'] = 'application/%s+xml' % feedType
     self.response.out.write(feedTree.toxml())
     return
       
