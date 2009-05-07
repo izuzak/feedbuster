@@ -39,6 +39,11 @@ class FeedBusterUtils():
   def fetchContentDOM(contentUrl):
     contentString = FeedBusterUtils.fetchContent(contentUrl)
     return minidom.parseString(contentString)
+    
+  @staticmethod
+  def fetchContentJSON(contentUrl):
+    contentString = FeedBusterUtils.fetchContent(contentUrl)
+    return simplejson.loads(contentString)
   
   @staticmethod
   def getFeedType(feedTree):
@@ -64,6 +69,26 @@ class ClearCache(webapp.RequestHandler):
     return str(memcache.flush_all())
 
 class MediaInjection(webapp.RequestHandler): 
+
+  # simple api - http://vimeo.com/api/clip/2539741.json
+  # advanced api - vimeo.videos.getThumbnailUrl
+  def getVimeoThumbnail(self, vimeoVideoId):
+    vimeoApiCallUrl = 'http://vimeo.com/api/clip/%s.json' % vimeoVideoId
+    vimeoApiResponseJson = FeedBusterUtils.fetchContentJSON(vimeoApiCallUrl)
+    return vimeoApiResponseJson[0]['thumbnail_large'].replace('\\','')
+    
+  def maxResizeImage(self, imageWidth, imageHeight):
+    #todo - switch to default params
+    ffImageMaxWidth = 525
+    ffImageMaxHeight = 175
+    
+    if imageWidth < ffImageMaxWidth and imageHeight < ffImageMaxHeight:
+      return imageWidth, imageHeight
+    else:
+      widthReduction = imageWidth/ffImageMaxWidth
+      heightReduction = imageHeight/ffImageMaxHeight
+      reduction =  widthReduction if widthReduction > heightReduction else heightReduction
+      return imageWidth/reduction, imageHeight/reduction,
 
   def getImageProperties(self, imageUrl):
     # check memcached
