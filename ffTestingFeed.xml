@@ -25,14 +25,6 @@
       <media:content height="228" type="image/jpeg" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width="380"/>
       <media:thumbnail height="228" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width="380">
     </media:group>
-    <media:group xmlns:media="http://search.yahoo.com/mrss/">
-      <media:content height="" type="image/jpeg" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2119-380x230.jpg" width=""/>
-      <media:thumbnail height="" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2119-380x228.jpg" width="">
-    </media:group>
-    <media:group xmlns:media="http://search.yahoo.com/mrss/">
-      <media:content height="" type="image/jpeg" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width=""/>
-      <media:thumbnail height="" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2125-380x228.jpg" width="">
-    </media:group>
   </item>
 </channel>
 </rss>
