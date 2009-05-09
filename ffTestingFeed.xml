@@ -1,30 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"
-     xmlns:dc="http://purl.org/dc/elements/1.1/"
-     xmlns:content="http://purl.org/rss/1.0/modules/content/"
-     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-<channel>
-  <title>Sample Feed</title>
-  <link>http://example.org/</link>
-  <description>For tesating only</description>
-  <dc:language>en-us</dc:language>
-  <dc:creator>Ivan Zuzak</dc:creator>
-
-  <item>
-    <title>First</title>
-    <link>http://code.google.com/p/feed-buster</link>
-    <guid isPermaLink="false">testing-1</guid>
-    <description>
-      Text.
-    </description>
-    <dc:subject>First post</dc:subject>
-    <dc:date>2002-02-02T13:54:20-05:00</dc:date>
-    <content:encoded>
-    </content:encoded>
-    <media:group xmlns:media="http://search.yahoo.com/mrss/">
-      <media:content height="228" type="image/jpeg" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width="380"/>
-      <media:thumbnail height="228" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width="380">
-    </media:group>
-  </item>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:wfw="http://wellformedweb.org/CommentAPI/"> 
+ 
+<channel> 
+	<title>Indexed</title> 
+	<atom:link href="http://thisisindexed.com/feed/" rel="self" type="application/rss+xml"/> 
+	<link>http://thisisindexed.com</link> 
+	<description>PUBLISHED WEEKDAY MORNINGS as the COFFEE BREWS</description> 
+	<pubDate>Fri, 08 May 2009 17:13:43 +0000</pubDate> 
+	<generator>http://wordpress.org/?v=2.6.2</generator> 
+	<language>en</language> 
+			<item> 
+		<title>Eww, fluffy.</title> 
+		<link>http://thisisindexed.com/2009/05/eww-fluffy/</link> 
+		<comments>http://thisisindexed.com/2009/05/eww-fluffy/#comments</comments> 
+		<pubDate>Fri, 08 May 2009 17:13:43 +0000</pubDate> 
+		<dc:creator>Jessica Hagy</dc:creator> 
+		
+		<category><![CDATA[experience]]></category> 
+ 
+		<guid isPermaLink="false">http://thisisindexed.com/?p=11971</guid> 
+		<description><![CDATA[ 
+]]></description> 
+			<content:encoded><![CDATA[><p><a href="http://thisisindexed.com/wp-content/uploads/2009/05/card2121.jpg" rel="lightbox[11971]"><img class="alignnone size-medium wp-image-11970" title="card2121" src="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" alt="" width="380" height="228" /></a></p> 
+]]></content:encoded> 
+			<wfw:commentRss>http://thisisindexed.com/2009/05/eww-fluffy/feed/</wfw:commentRss> 
+		<media:group xmlns:media="http://search.yahoo.com/mrss/"><media:content height="228" type="image/jpeg" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width="380"/><media:thumbnail height="228" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width="380"/></media:group></item> 
 </channel>
 </rss>
