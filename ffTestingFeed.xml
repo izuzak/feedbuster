@@ -23,6 +23,6 @@
 			<content:encoded><![CDATA[><p><a href="http://thisisindexed.com/wp-content/uploads/2009/05/card2121.jpg" rel="lightbox[11971]"><img class="alignnone size-medium wp-image-11970" title="card2121" src="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" alt="" width="380" height="228" /></a></p> 
 ]]></content:encoded> 
 			<wfw:commentRss>http://thisisindexed.com/2009/05/eww-fluffy/feed/</wfw:commentRss> 
-		<media:group xmlns:media="http://search.yahoo.com/mrss/"><media:content height="228" type="image/jpeg" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width="380"/><media:thumbnail height="228" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width="380"/></media:group></item> 
+		<media:group xmlns:media="http://search.yahoo.com/mrss/"><media:content height="" type="image/jpeg" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width=""/><media:thumbnail height="" url="http://thisisindexed.com/wp-content/uploads/2009/05/card2121-380x228.jpg" width=""/></media:group></item> 
 </channel>
 </rss>
