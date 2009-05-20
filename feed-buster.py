@@ -6,34 +6,41 @@ import urlparse
 import mimetypes
 import xpath
 
+import math
 from xml.dom import minidom
 from xml.etree import ElementTree 
 from xml.sax import saxutils 
 from django.utils import simplejson 
 from google.appengine.api import memcache
 from google.appengine.api import urlfetch
+from google.appengine.api.urlfetch import DownloadError 
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 
 class FeedBusterUtils():
   @staticmethod
-  def getRequestParams(requestUrl, paramsList):
-    paramIndexes = [(param, requestUrl.find(param)) for param in paramsList]
-    paramIndexes = filter(lambda x: x[1]!=-1, paramIndexes)
-    paramIndexes.sort(key=lambda x:x[1])
-    paramIndexes = [(paramIndexes[i][0], paramIndexes[i][1] + len(paramIndexes[i][0]) + 1, len(requestUrl) if (i == (len(paramIndexes)-1)) else paramIndexes[i+1][1]-1)
+  def getRequestParams(requestQueryString, paramsList):
+    requestQueryString = "&" + requestQueryString
+    paramIndexes = [(param, requestQueryString.find('&' + param + '=')) for param in paramsList]
+    paramIndexes = sorted(filter(lambda x: x[1]!=-1, paramIndexes),key=lambda x:x[1])
+    paramIndexes = [(paramIndexes[i][0], paramIndexes[i][1] + len(paramIndexes[i][0]) + 2, len(requestQueryString) if (i == (len(paramIndexes)-1)) else paramIndexes[i+1][1])
                     for i in range(len(paramIndexes))]
-    return dict((param[0], urllib.unquote(requestUrl[param[1]:param[2]])) for param in paramIndexes)
+    return dict((param[0], urllib.unquote(requestQueryString[param[1]:param[2]])) for param in paramIndexes)
 
   @staticmethod
-  def fetchContent(contentUrl):
+  def fetchContent(contentUrl, maxRetryCount=2, maxTimeout=10):
     contentUrl = contentUrl.replace(" ", "%20")
-    fetchResult = urlfetch.fetch(contentUrl) 
-    if fetchResult.status_code != 200:
+    for i in range(maxRetryCount):
+      try: 
+        fetchResult = urlfetch.fetch(contentUrl, deadline=maxTimeout)
+        break
+      except DownloadError: 
+        fetchResult = None
+    if not(fetchResult) or fetchResult.status_code != 200:
       return None
-    contentString = fetchResult.content
-    return contentString
+    else:
+      return fetchResult.content
   
   @staticmethod
   def fetchContentDOM(contentUrl):
@@ -77,32 +84,34 @@ class MediaInjection(webapp.RequestHandler):
     vimeoApiResponseJson = FeedBusterUtils.fetchContentJSON(vimeoApiCallUrl)
     return vimeoApiResponseJson[0]['thumbnail_large'].replace('\\','')
     
-  def maxResizeImage(self, imageWidth, imageHeight):
-    #todo - switch to default params
-    ffImageMaxWidth = 525
-    ffImageMaxHeight = 175
-    
-    if imageWidth < ffImageMaxWidth and imageHeight < ffImageMaxHeight:
-      return imageWidth, imageHeight
+  def maxResizeImage(self, imageWidth, imageHeight, maxImageWidth = 525.0, maxImageHeight = 175.0):
+    imageWidth = float(imageWidth)
+    imageHeight = float(imageHeight)
+    if imageWidth < maxImageWidth and imageHeight < maxImageHeight:
+      return str(int(imageWidth)), str(int(imageHeight))
     else:
-      widthReduction = imageWidth/ffImageMaxWidth
-      heightReduction = imageHeight/ffImageMaxHeight
-      reduction =  widthReduction if widthReduction > heightReduction else heightReduction
-      return imageWidth/reduction, imageHeight/reduction,
-
+      widthReduction = imageWidth/maxImageWidth
+      heightReduction = imageHeight/maxImageHeight
+      reduction = widthReduction if widthReduction > heightReduction else heightReduction
+      return str(int(math.floor(imageWidth/reduction))), str(int(math.floor(imageHeight/reduction)))
+      
+  def callImg2JsonService(self, imageUrl):
+    serviceCallUrl = 'http://img2json.appspot.com/go/?url='+imageUrl
+    serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
+    imageInfo = simplejson.loads(serviceResultJson.replace("\\x00","").replace("'",'"').replace(";","")) if serviceResultJson else None
+    if imageInfo is None or imageInfo.has_key('error'):
+      imageInfo = None
+    else:
+      imageInfo = { 'width' : str(imageInfo['width']), 'height' : str(imageInfo['height']), 'mimeType' : imageInfo['mimeType'] }
+    return imageInfo
+    
   def getImageProperties(self, imageUrl):
-    # check memcached
-    #imageInfo = memcache.get(imageUrl)
+    # check cache and datastore
+    # imageInfo = memcache.get(imageUrl)
     imageInfo=None
     # invoke IMG2JSON AppEngine Service
     if imageInfo is None:
-      serviceCallUrl = 'http://img2json.appspot.com/go/?url='+imageUrl
-      serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
-      imageInfo = simplejson.loads(serviceResultJson.replace("'",'"').replace(";","")) if serviceResultJson else None
-      if imageInfo is None or imageInfo.has_key('error'):
-        imageInfo = None
-      else:
-        imageInfo = { 'width' : str(imageInfo['width']), 'height' : str(imageInfo['height']), 'mimeType' : imageInfo['mimeType'] }
+      imageInfo = self.callImg2JsonService(imageUrl)
     return imageInfo
     
   def setImageProperties(self, imageUrl, imageInfo):
@@ -128,9 +137,9 @@ class MediaInjection(webapp.RequestHandler):
       videoId = videoId.group(1)
       videos += [{'mediaType' : 'vid',
                   'url' : 'http://vimeo.com/moogaloop.swf?clip_id=' + videoId,
-                  'thumb' : 'http://friendfeed.com/static/images/film.png?v=d0719a0e04c5eafb9ab6895204fc5b0d', #TODO: fetch thumb from vimeo api
-                  'thumbWidth' : '130',
-                  'thumbHeight' : '97',
+                  'thumb' : self.getVimeoThumbnail(videoId),
+                  'thumbWidth' : '160',
+                  'thumbHeight' : '120',
                   'type' : 'application/x-shockwave-flash'}]
     #video - youtube
     videoTags = re.findall(r'(<embed[^>]*? src=[\'"]{0,1}[^\'"]+?youtube\.com/v/[^\'"]+?["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
@@ -140,8 +149,8 @@ class MediaInjection(webapp.RequestHandler):
       videos += [{'mediaType' : 'vid',
                   'url' : 'http://www.youtube.com/v/' + videoId,
                   'thumb' : 'http://img.youtube.com/vi/' + videoId + '/2.jpg',
-                  'thumbWidth' : '130',
-                  'thumbHeight' : '97',
+                  'thumbWidth' : '160',
+                  'thumbHeight' : '120',
                   'type' : 'application/x-shockwave-flash'}]
 		
 		# TODO: video - flickr
@@ -174,6 +183,8 @@ class MediaInjection(webapp.RequestHandler):
       else:
         imageWidth = imageWidth.group(1)
         imageHeight = imageHeight.group(1)
+        
+      imageWidth, imageHeight = self.maxResizeImage(imageWidth, imageHeight)
 
       #self.setImageProperties(imageSrc, { 'width' : imageWidth, 'height' : imageHeight, 'mimeType' : imageType })
       images += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
@@ -237,7 +248,7 @@ class MediaInjection(webapp.RequestHandler):
     else:
       return None
   
-  def adsBlacklist(self, url):
+  def isAdvertising(self, url):
     return True
 
   def isSmallImage(self, mediaItem):
@@ -250,11 +261,18 @@ class MediaInjection(webapp.RequestHandler):
       else:
         return True
     return True 
+  
+  def processFeedUrl(self, feedUrl):
+    if feedUrl.startswith("http://feeds.postrank.com/channel/") and feedUrl.endswith('/'):
+      return feedUrl[0:-1]
+    else:
+      return feedUrl
      
   def get(self):
-    requestParams = FeedBusterUtils.getRequestParams(self.request.url, ['inputFeedUrl', 'webScrape']) 
-    feedUrl = requestParams['inputFeedUrl']
+    requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, ['inputFeedUrl', 'webScrape', 'getDescription']) 
+    feedUrl = self.processFeedUrl(requestParams['inputFeedUrl'])
     webScrape = requestParams['webScrape'] if requestParams.has_key('webScrape') else None
+    getDescription = int(requestParams['getDescription']) if requestParams.has_key('getDescription') else None
     feedTree = FeedBusterUtils.fetchContentDOM(feedUrl)
     feedType = FeedBusterUtils.getFeedType(feedTree)
     
@@ -285,7 +303,7 @@ class MediaInjection(webapp.RequestHandler):
     crawledMedia = []
 
     for feedItemIndex in range(len(feedItems)):
-      if feedItemIndex >= 15:
+      if feedItemIndex >= 4:
         continue
       feedItem = feedItems[feedItemIndex]
       itemId = xpath.find(parsingParams['id'], feedItem)
@@ -310,11 +328,22 @@ class MediaInjection(webapp.RequestHandler):
           if len(scrapedMediaLinks) == 0:
             descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
             scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
+      
+      if getDescription:
+        return
+        # todo - http://nadeausoftware.com/articles/2007/09/php_tip_how_strip_html_tags_web_page
+        # provjeri jel uopce ima contenta
+        # newDescription = xpath.find(parsingParams['content'], feedItem)[0].firstChild()
+        # newDescription = saxutils.unescape(newDescription.toxml(), {'&quot;' : '"'})
+        # self.response.out.write(newDescription)
+        # newDescription = re.sub(r'<.*?>', '', newDescription)[0:getDescription]
+        # self.response.out.write(newDescription)
+      
       crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId}]
       existingMedia = xpath.find(parsingParams['existingMedia'], feedItem)
       for existingMediaItem in existingMedia:
         feedItem.removeChild(existingMediaItem)
-    
+
     # count repeated links
     mediaCount = {}
     for itemMedia in crawledMedia:
@@ -325,21 +354,23 @@ class MediaInjection(webapp.RequestHandler):
     for itemMedia in crawledMedia:
       # nonidentified media
       itemMedia['mediaLinks'] = filter(lambda x: x['type']!=None, itemMedia['mediaLinks'])
-      # repeated media
-      itemMedia['mediaLinks'] = filter(lambda x: mediaCount[x['url']]<3, itemMedia['mediaLinks'])
       # small images
       itemMedia['mediaLinks'] = filter(self.isSmallImage, itemMedia['mediaLinks'])
-      #ads
-      itemMedia['mediaLinks'] = filter(self.adsBlacklist, itemMedia['mediaLinks'])
+      # ads
+      itemMedia['mediaLinks'] = filter(self.isAdvertising, itemMedia['mediaLinks'])
+      # write to cache
+      memcache.set(itemMedia['cacheId'], {'itemHash' : itemMedia['itemHash'], 'crawledMedia' : itemMedia['mediaLinks']})
+      
+    # filters 
+    for itemMedia in crawledMedia:
+      # repeated media
+      itemMedia['mediaLinks'] = filter(lambda x: mediaCount[x['url']]<3, itemMedia['mediaLinks'])
 
     #generate media enclosure XML elements
     for itemMedia in crawledMedia:
-      feedItem = itemMedia['feedNode']
-      media = itemMedia['mediaLinks']
-      memcache.set(itemMedia['cacheId'], {'itemHash' : itemMedia['itemHash'], 'crawledMedia' : media})
-      for mediaLink in media:
+      for mediaLink in itemMedia['mediaLinks']:
         mediaElem = self.createMediaNode(feedTree, mediaLink)
-        feedItem.appendChild(mediaElem)
+        itemMedia['feedNode'].appendChild(mediaElem)
 	  
 		# write output feed
     self.response.headers['Content-Type'] = 'application/%s+xml' % feedType
