@@ -201,54 +201,36 @@ class MediaInjection(webapp.RequestHandler):
       crawledMedia += self.searchForMediaString(stringToParse)
     return crawledMedia
   
+  def searchForMedia(self, soupString):
+    mediaSoup = BeautifulSoup.BeautifulSoup(soupString, fromEncoding='utf-8')
+    for image in mediaSoup("img"):
+      self.response.out.write(str(image)+"\n\n")
+    return []
+    
   def createMediaNode(self, feedTree, mediaLink):
     mediaType = mediaLink['mediaType']
+    
     if mediaType == 'img':
-      groupElem = feedTree.createElement('media:group')
-      groupElem.setAttribute('xmlns:media','http://search.yahoo.com/mrss/')
+      groupTag = BeautifulSoup.Tag(feedTree, "media:group", [("xmlns:media", "http://search.yahoo.com/mrss/")])
+      contentTag = BeautifulSoup.Tag(feedTree, "media:content", [("url", mediaLink["url"]), ("type", mediaLink["type"]), ("width", mediaLink["width"]), ("height", mediaLink["height"])])
+      thumbTag = BeautifulSoup.Tag(feedTree, "media:thumbnail", [("url", mediaLink["url"]), ("width", mediaLink["width"]), ("height", mediaLink["height"])])
+      groupTag.append(contentTag)
+      groupTag.appent(thumbTag)
+      return groupTag
       
-      contentElem = feedTree.createElement('media:content')
-      contentElem.setAttribute('url', mediaLink['url'])
-      contentElem.setAttribute('type', mediaLink['type'])
-      contentElem.setAttribute('width', mediaLink['width'])
-      contentElem.setAttribute('height', mediaLink['height'])
-      
-      thumbElem = feedTree.createElement('media:thumbnail')
-      thumbElem.setAttribute('url', mediaLink['url'])
-      thumbElem.setAttribute('width', mediaLink['width'])
-      thumbElem.setAttribute('height', mediaLink['height'])
-      
-      groupElem.appendChild(contentElem)
-      groupElem.appendChild(thumbElem)
-      return groupElem
     elif mediaType == 'vid':
-      groupElem = feedTree.createElement('media:group')
-      groupElem.setAttribute('xmlns:media','http://search.yahoo.com/mrss/')
-      
-      contentElem = feedTree.createElement('media:content')
-      contentElem.setAttribute('url', mediaLink['url'])
-      contentElem.setAttribute('type', mediaLink['type'])
-      contentElem.setAttribute('width', "")
-      contentElem.setAttribute('height', "")
+      groupTag = BeautifulSoup.Tag(feedTree, "media:group", [("xmlns:media", "http://search.yahoo.com/mrss/")])
+      contentTag = BeautifulSoup.Tag(feedTree, "media:content", [("url", mediaLink["url"]), ("type", mediaLink["type"]), ("width", ""), ("height", "")])
+      thumbTag = BeautifulSoup.Tag(feedTree, "media:thumbnail", [("url", mediaLink["thumb"]), ("width", mediaLink["thumbWidth"]), ("height", mediaLink["thumbHeight"])])
+      groupTag.append(contentTag)
+      groupTag.appent(thumbTag)
+      return groupTag
 
-      thumbElem = feedTree.createElement('media:thumbnail')
-      thumbElem.setAttribute('url', mediaLink['thumb'])
-      thumbElem.setAttribute('width', mediaLink['thumbWidth'])
-      thumbElem.setAttribute('height', mediaLink['thumbHeight'])
-      
-      groupElem.appendChild(thumbElem)  
-      groupElem.appendChild(contentElem)
-      return groupElem
     elif mediaType == 'aud':
-      groupElem = feedTree.createElement('media:group')
-      groupElem.setAttribute('xmlns:media','http://search.yahoo.com/mrss/')
-      
-      contentElem = feedTree.createElement('media:content')
-      contentElem.setAttribute('url', mediaLink['url'])
-      contentElem.setAttribute('type', mediaLink['type'])
-      
-      groupElem.appendChild(contentElem)
-      return groupElem
+      groupTag = BeautifulSoup.Tag(feedTree, "media:group", [("xmlns:media", "http://search.yahoo.com/mrss/")])
+      contentTag = BeautifulSoup.Tag(feedTree, "media:content", [("url", mediaLink["url"]), ("type", mediaLink["type"])])
+      groupTag.append(contentTag)
+      return groupTag
     else:
       return None
   
@@ -272,33 +254,136 @@ class MediaInjection(webapp.RequestHandler):
     else:
       return feedUrl
   
-  def new_get(self):
+  def get(self):
     requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, ['inputFeedUrl', 'webScrape', 'getDescription']) 
     feedUrl = self.filterFeedUrl(requestParams['inputFeedUrl'])
     webScrape = requestParams['webScrape'] if requestParams.has_key('webScrape') else None
     getDescription = int(requestParams['getDescription']) if requestParams.has_key('getDescription') else None
+
+    feedUrl = self.filterFeedUrl(feedUrl)
+    if not(feedUrl): return
+    
     feedString = FeedBusterUtils.fetchContent(feedUrl) 
-    feedSoup = BeautifulSoup.BeautifulStoneSoup(feedString, fromEncoding='utf-8')
-    #self.response.out.write(feedSoup.prettify())
+    feedSoup = BeautifulSoup.BeautifulStoneSoup(feedString, fromEncoding='utf-8').find({'rss':True, 'feed':True}, recursive=False)
+          
+    if feedSoup is None:
+      self.response.out.write(feedString)
+      return
+    
+    feedType = feedSoup.name
+    
+    #contentNode = feedSoup.find("content:encoded", recursive=True)
+    #content = "".join([str(j) for j in contentNode])
+    #self.response.out.write(content+"\n\n")
     #return
-    #for i in feedSoup.contents:
-    #  self.response.out.write(str(i)+"\n\n--\n\n")
-    #return
-    #feedSoup.content[0].findNextSibling(name='rss')
-    #if 
-    #feedSoup.find('rss', recursive=False) == None
-    #feedSoup.find('feed', recursive=False) == None
-    #self.response.out.write(str(feedSoup.contents[4].name))
-    return
-    if rootTagName.lower() == "rss" or rootTagName.lower() == "rdf":
-      self.response.out.write("rss")
-    elif rootTagName.lower() == "feed":
-      self.response.out.write("atom")
+    if feedType == 'rss':
+      soupParser = { 'items' : lambda feedSoup: feedSoup.channel.findAll(['item'], recursive=False), 
+                     'link' : lambda itemSoup: itemSoup.find(["link", "origLink"], recursive=False),
+                     'id' : lambda itemSoup: itemSoup.find(["guid"], recursive=False),
+                     'updated' : lambda itemSoup: itemSoup.find(["pubDate", "date", "modified"], recursive=False),
+                     'published' : 'issued',
+                     'description' : lambda itemSoup: itemSoup.find(["description"], recursive=False),
+                     'content' : lambda itemSoup: itemSoup.find(["content:encoded"], recursive=False),
+                     'existingMedia' : lambda itemSoup: itemSoup.findAll(["media:thumbnail", "media:content", "media:group"], xmlns="http://search.yahoo.com/mrss/", recursive=False)}
+    elif feedType == 'atom':
+      def getLink(itemSoup): 
+        retVal = itemSoup.find(["link"], rel="alternate", recursive=False)
+        if not(retVal):
+          retVal = itemSoup.find(["link"], rel=None, recursive=False)
+        return retVal['href']
+      soupParser = { 'items' : lambda feedSoup: feedSoup.channel.findAll(['entry'], recursive=False), 
+                     'link' : getLink, 
+                     'id' : lambda itemSoup: itemSoup.find(["id"], recursive=False),
+                     'updated' : lambda itemSoup: itemSoup.find(["updated"], recursive=False),
+                     'published' : 'published',
+                     'description' : lambda itemSoup: itemSoup.find(["summary"], recursive=False),
+                     'content' : lambda itemSoup: itemSoup.find(["content"], recursive=False),
+                     'existingMedia' : lambda itemSoup: itemSoup(["media:thumbnail", "media:content", "media:group"], xmlns="http://search.yahoo.com/mrss/", recursive=False)}
     else:
-      self.response.out.write("krivo")
-    #feedType = FeedBusterUtils.getFeedType(feedTree)
-  
-  def get(self):
+      return
+    
+    # crawl feed or web post
+    feedItems = soupParser['items'](feedSoup)
+    crawledMedia = []
+    processedItems = 0
+    for feedItemIndex in range(len(feedItems)):
+      if processedItems >= 4:
+        continue
+      feedItem = feedItems[feedItemIndex]
+      itemId = soupParser['id'](feedItem) 
+      if not(itemId):
+        itemId = soupParser['link'](feedItem).string
+      else:
+        itemId = itemId.string
+      
+      itemHash = hash(str(feedItem))
+      cacheId = itemId + (('_' + webScrape) if webScrape else "")
+      
+      cachedMedia = memcache.get(cacheId)
+      if cachedMedia and cachedMedia['itemHash'] == itemHash:
+        scrapedMediaLinks = cachedMedia['crawledMedia']
+      else:
+        processedItems += 1
+        
+        if webScrape:
+          linkNodeUrl = soupParser['link'](feedItem).string
+          linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
+          scrapedMediaLinks = self.searchForMedia(linkResultString, webScrape)
+        else:
+          contentNode = soupParser['content'](feedItem)
+          content = "".join([str(j) for j in contentNode])
+          scrapedMediaLinks = self.searchForMedia(content)
+          if len(scrapedMediaLinks) == 0:
+            descriptionCrawlNode = soupParser['description'](feedItem)
+            content = "".join([str(j) for j in descriptionCrawlNode])
+            scrapedMediaLinks = self.searchForMedia(content)
+        
+        # description parsing
+        description = None
+        if getDescription:
+          description = ''.join(soupParser['contents'](feedSoup).findAll(text=True))[0:getDescription]
+      
+      # crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId, 'description' : description}]
+      
+      #existingMedia = xpath.find(parsingParams['existingMedia'], feedItem)
+      #for existingMediaItem in existingMedia:
+      #subtree.extract()
+      #feedItem.removeChild(existingMediaItem)
+    
+    return
+    # count repeated links
+    mediaCount = {}
+    for itemMedia in crawledMedia:
+      for mediaLink in itemMedia['mediaLinks']:
+        mediaCount[mediaLink['url']] = mediaCount[mediaLink['url']]+1 if mediaCount.has_key(mediaLink['url']) else 0
+    
+    # filters 
+    for itemMedia in crawledMedia:
+      # nonidentified media
+      itemMedia['mediaLinks'] = filter(lambda x: x['type']!=None, itemMedia['mediaLinks'])
+      # small images
+      itemMedia['mediaLinks'] = filter(self.isSmallImage, itemMedia['mediaLinks'])
+      # ads
+      itemMedia['mediaLinks'] = filter(self.isAdvertising, itemMedia['mediaLinks'])
+      # write to cache
+      memcache.set(itemMedia['cacheId'], {'itemHash' : itemMedia['itemHash'], 'crawledMedia' : itemMedia['mediaLinks']})
+      
+    # filters 
+    for itemMedia in crawledMedia:
+      # repeated media
+      itemMedia['mediaLinks'] = filter(lambda x: mediaCount[x['url']]<3, itemMedia['mediaLinks'])
+
+    #generate media enclosure XML elements
+    for itemMedia in crawledMedia:
+      for mediaLink in itemMedia['mediaLinks']:
+        mediaElem = self.createMediaNode(feedTree, mediaLink)
+        itemMedia['feedNode'].append(mediaElem)
+	  
+		# write output feed
+    self.response.headers['Content-Type'] = 'application/%s+xml' % feedType
+    self.response.out.write(feedTree.prettify())
+    return           
+  def old_get(self):
     requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, ['inputFeedUrl', 'webScrape', 'getDescription']) 
     feedUrl = self.filterFeedUrl(requestParams['inputFeedUrl'])
     webScrape = requestParams['webScrape'] if requestParams.has_key('webScrape') else None
