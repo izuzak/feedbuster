@@ -5,6 +5,7 @@ import urllib
 import urlparse
 import mimetypes
 import xpath
+import BeautifulSoup
 
 import math
 from xml.dom import minidom
@@ -71,10 +72,14 @@ class FeedBusterUtils():
   def getData(key):
     return memcache.get(key)
       
-class ClearCache(webapp.RequestHandler):
+class CacheControl(webapp.RequestHandler):
   def get(self):
     return str(memcache.flush_all())
-
+    
+class Redirect(webapp.RequestHandler):
+  def get(self):
+    self.redirect("http://code.google.com/p/feed-buster/")
+    
 class MediaInjection(webapp.RequestHandler): 
 
   # simple api - http://vimeo.com/api/clip/2539741.json
@@ -109,7 +114,6 @@ class MediaInjection(webapp.RequestHandler):
     # check cache and datastore
     # imageInfo = memcache.get(imageUrl)
     imageInfo=None
-    # invoke IMG2JSON AppEngine Service
     if imageInfo is None:
       imageInfo = self.callImg2JsonService(imageUrl)
     return imageInfo
@@ -262,15 +266,41 @@ class MediaInjection(webapp.RequestHandler):
         return True
     return True 
   
-  def processFeedUrl(self, feedUrl):
+  def filterFeedUrl(self, feedUrl):
     if feedUrl.startswith("http://feeds.postrank.com/channel/") and feedUrl.endswith('/'):
       return feedUrl[0:-1]
     else:
       return feedUrl
-     
+  
+  def new_get(self):
+    requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, ['inputFeedUrl', 'webScrape', 'getDescription']) 
+    feedUrl = self.filterFeedUrl(requestParams['inputFeedUrl'])
+    webScrape = requestParams['webScrape'] if requestParams.has_key('webScrape') else None
+    getDescription = int(requestParams['getDescription']) if requestParams.has_key('getDescription') else None
+    feedString = FeedBusterUtils.fetchContent(feedUrl) 
+    feedSoup = BeautifulSoup.BeautifulStoneSoup(feedString, fromEncoding='utf-8')
+    #self.response.out.write(feedSoup.prettify())
+    #return
+    #for i in feedSoup.contents:
+    #  self.response.out.write(str(i)+"\n\n--\n\n")
+    #return
+    #feedSoup.content[0].findNextSibling(name='rss')
+    #if 
+    #feedSoup.find('rss', recursive=False) == None
+    #feedSoup.find('feed', recursive=False) == None
+    #self.response.out.write(str(feedSoup.contents[4].name))
+    return
+    if rootTagName.lower() == "rss" or rootTagName.lower() == "rdf":
+      self.response.out.write("rss")
+    elif rootTagName.lower() == "feed":
+      self.response.out.write("atom")
+    else:
+      self.response.out.write("krivo")
+    #feedType = FeedBusterUtils.getFeedType(feedTree)
+  
   def get(self):
     requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, ['inputFeedUrl', 'webScrape', 'getDescription']) 
-    feedUrl = self.processFeedUrl(requestParams['inputFeedUrl'])
+    feedUrl = self.filterFeedUrl(requestParams['inputFeedUrl'])
     webScrape = requestParams['webScrape'] if requestParams.has_key('webScrape') else None
     getDescription = int(requestParams['getDescription']) if requestParams.has_key('getDescription') else None
     feedTree = FeedBusterUtils.fetchContentDOM(feedUrl)
@@ -377,7 +407,7 @@ class MediaInjection(webapp.RequestHandler):
     self.response.out.write(feedTree.toxml())
     return
       
-application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection), ('/clearCache.*', ClearCache)], debug=True)
+application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection), ('/cache.*', CacheControl), ('.*', Redirect)], debug=True)
 
 def main():
   run_wsgi_app(application)
