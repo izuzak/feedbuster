@@ -48,6 +48,10 @@
       <media:content height="" width="" type="image/jpeg" url="http://friendfeed.com/static/images/friendblog.png"/>
       <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/friendblog.png"/>
     </media:group> 
+		<media:group>
+      <media:content height="" width="" type="image/jpeg" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
+      <media:thumbnail height="" width="" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
+    </media:group> 
   </item>
   <item> 
 		<title>resizing of oversized images issue</title> 
@@ -57,8 +61,8 @@
 		<description><![CDATA[]]>
     </description> 
 		<media:group>
-      <media:content height="176" width="526" type="image/jpeg" url="http://friendfeed.com/static/images/friendblog.png"/>
-      <media:thumbnail height="176" width="526" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:content height="176" width="526" type="image/jpeg" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
+      <media:thumbnail height="176" width="526" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
     </media:group> 
   </item>
 </channel>
