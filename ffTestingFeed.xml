@@ -3,12 +3,12 @@
 	<title>Friendfeed testing RSS feed</title> 
 	<link>http://friendfeed.com/izuzak</link> 
 	<description>Friendfeed testing RSS feed</description> 
-	<pubDate>Fri, 08 May 2009 17:13:59 +0000</pubDate> 
+	<pubDate>Fri, 08 May 2009 17:13:00 +0000</pubDate> 
 	<language>en</language> 
 	<item> 
 		<title>api/feedtest image list expansion issue</title> 
 		<link>http://friendfeed.com/izuzak</link> 
-		<pubDate>Fri, 08 May 2009 17:13:43 +0000</pubDate> 
+		<pubDate>Fri, 08 May 2009 17:13:59 +0000</pubDate> 
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?059</guid> 
 		<description><![CDATA[]]>
     </description> 
@@ -41,8 +41,8 @@
       <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
     </media:group>
 		<media:group>
-      <media:content height="50" width="227" type="image/jpeg" url="http://friendfeed.com/static/images/friendblog.png"/>
-      <media:thumbnail height="50" width="227" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:content height="" width="" type="image/jpeg" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/friendblog.png"/>
     </media:group> 
   </item>
   <item> 
@@ -52,10 +52,6 @@
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?056</guid> 
 		<description><![CDATA[]]>
     </description> 
-		<media:group>
-      <media:content height="175" width="525" type="image/jpeg" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
-      <media:thumbnail height="175" width="525" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
-    </media:group>
 		<media:group>
       <media:content height="176" width="526" type="image/jpeg" url="http://friendfeed.com/static/images/friendblog.png"/>
       <media:thumbnail height="176" width="526" url="http://friendfeed.com/static/images/friendblog.png"/>
