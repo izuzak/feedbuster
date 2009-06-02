@@ -41,8 +41,8 @@
       <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
     </media:group>
 		<media:group>
-      <media:content height="50" width="227" type="image/jpeg" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
-      <media:thumbnail height="50" width="227" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+      <media:content height="50" width="227" type="image/jpeg" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:thumbnail height="50" width="227" url="http://friendfeed.com/static/images/friendblog.png"/>
     </media:group> 
   </item>
   <item> 
@@ -53,12 +53,12 @@
 		<description><![CDATA[]]>
     </description> 
 		<media:group>
-      <media:content height="525" width="175" type="image/jpeg" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
-      <media:thumbnail height="525" width="175" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+      <media:content height="175" width="525" type="image/jpeg" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+      <media:thumbnail height="175" width="525" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
     </media:group>
 		<media:group>
-      <media:content height="526" width="176" type="image/jpeg" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
-      <media:thumbnail height="526" width="176" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+      <media:content height="176" width="526" type="image/jpeg" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:thumbnail height="176" width="526" url="http://friendfeed.com/static/images/friendblog.png"/>
     </media:group> 
   </item>
 </channel>
