@@ -13,12 +13,16 @@
 		<description><![CDATA[]]>
     </description> 
 		<media:group>
-      <media:content height="175" width="525" type="image/jpeg" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
-      <media:thumbnail height="175" width="525" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+      <media:content height="50" width="227" type="image/jpeg" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+      <media:thumbnail height="50" width="227" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
     </media:group>
     <media:group>
-      <media:content height="175" width="525" type="image/jpeg" url="http://friendfeed.com/static/images/friendblog.png"/>
-      <media:thumbnail height="175" width="525" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:content height="66" width="255" type="image/png" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:thumbnail height="66" width="255" url="http://friendfeed.com/static/images/friendblog.png"/>
+    </media:group>
+    <media:group>
+      <media:content height="506" width="400" type="image/jpeg" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
+      <media:thumbnail height="506" width="400" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
     </media:group> 
   </item>
 	<item> 
@@ -45,7 +49,7 @@
       <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
     </media:group>
 		<media:group>
-      <media:content height="" width="" type="image/jpeg" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:content height="" width="" type="image/png" url="http://friendfeed.com/static/images/friendblog.png"/>
       <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/friendblog.png"/>
     </media:group> 
 		<media:group>
