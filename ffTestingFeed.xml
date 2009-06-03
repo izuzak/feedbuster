@@ -39,7 +39,7 @@
 		<title>automatic resizing of oversized images issue</title> 
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:57 +0000</pubDate> 
-		<guid isPermaLink="false">http://friendfeed.com/izuzak?056</guid> 
+		<guid isPermaLink="false">http://friendfeed.com/izuzak?057</guid> 
 		<description><![CDATA[ This test case includes a single image enclosure which has it's height/width attributes set. However, the image is larger than the maximum allowed, so the iamge is automatically resized. The interesting thing is that this is not done by resizing the image to the maximum allowed dimensions (525/175), but by halving the image dimensions several times. So, in result the image is rendered smaller than it could be with a smarter resizing method, as in the "visibility and autoresize" test case. ]]></description> 
 		<media:group>
       <media:content height="506" width="400" type="image/jpeg" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
@@ -50,7 +50,7 @@
 		<title>multiple images with at least one image with no height/width image set issue</title> 
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:56 +0000</pubDate> 
-		<guid isPermaLink="false">http://friendfeed.com/izuzak?057</guid> 
+		<guid isPermaLink="false">http://friendfeed.com/izuzak?056</guid> 
 		<description><![CDATA[ This test case contains three image enclosures, two which do not have their height/width attributes set, and one that does. In http://friendfeed.com or http://friendfeed.com/api/feedtest only two images are shown - the first image without height/width attributes is shown (other images witout height/width attributes are not shown) and all iamges which do have height/width attributes set.]]>
     </description> 
 		<media:group>
@@ -66,17 +66,36 @@
       <media:thumbnail height="506" width="400" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
     </media:group>
   </item>
-  	<item> 
+  <item> 
 		<title>image type not set</title> 
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:55 +0000</pubDate> 
-		<guid isPermaLink="false">http://friendfeed.com/izuzak?058</guid> 
+		<guid isPermaLink="false">http://friendfeed.com/izuzak?055</guid> 
 		<description><![CDATA[ ]]></description> 
 		<media:group>
       <media:content height="" width="" type="" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
       <media:thumbnail height="" width="" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
     </media:group> 
   </item>
-
+  <item> 
+		<title>multiple images with no type</title> 
+		<link>http://friendfeed.com/izuzak</link> 
+		<pubDate>Fri, 08 May 2009 17:13:54 +0000</pubDate> 
+		<guid isPermaLink="false">http://friendfeed.com/izuzak?054</guid> 
+		<description><![CDATA[ This test case contains three image enclosures, two which do not have their height/width attributes set, and one that does. In http://friendfeed.com or http://friendfeed.com/api/feedtest only two images are shown - the first image without height/width attributes is shown (other images witout height/width attributes are not shown) and all iamges which do have height/width attributes set.]]>
+    </description> 
+		<media:group>
+      <media:content height="" width="" type="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+      <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+    </media:group>
+		<media:group>
+      <media:content height="" width="" type="" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/friendblog.png"/>
+    </media:group> 
+		<media:group>
+      <media:content height="506" width="400" type="" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
+      <media:thumbnail height="506" width="400" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
+    </media:group>
+  </item>
 </channel>
 </rss>
