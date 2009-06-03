@@ -47,7 +47,7 @@
     </media:group>
   </item>
   <item> 
-		<title>4. multiple images with at least one image with no height/width image set test case</title> 
+		<title>4. multiple images with more than one image that has no height/width set test case</title> 
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:56 +0000</pubDate> 
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?056</guid> 
