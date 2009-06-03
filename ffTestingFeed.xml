@@ -71,7 +71,7 @@
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:55 +0000</pubDate> 
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?055</guid> 
-		<description><![CDATA[ ]]></description> 
+		<description><![CDATA[ This is the same test case ]]></description> 
 		<media:group>
       <media:content height="" width="" type="" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
       <media:thumbnail height="" width="" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
@@ -82,19 +82,15 @@
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:54 +0000</pubDate> 
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?054</guid> 
-		<description><![CDATA[ This test case contains three image enclosures, two which do not have their height/width attributes set, and one that does. In http://friendfeed.com or http://friendfeed.com/api/feedtest only two images are shown - the first image without height/width attributes is shown (other images witout height/width attributes are not shown) and all iamges which do have height/width attributes set.]]>
+		<description><![CDATA[ This test case includes two image enclosures without the type attribute. Both iamges are correctly shown.]]>
     </description> 
 		<media:group>
-      <media:content height="" width="" type="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
-      <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+      <media:content height="50" width="227" type="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
+      <media:thumbnail height="50" width="227" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
     </media:group>
-		<media:group>
-      <media:content height="" width="" type="" url="http://friendfeed.com/static/images/friendblog.png"/>
-      <media:thumbnail height="" width="" url="http://friendfeed.com/static/images/friendblog.png"/>
-    </media:group> 
-		<media:group>
-      <media:content height="506" width="400" type="" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
-      <media:thumbnail height="506" width="400" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
+    <media:group>
+      <media:content height="66" width="255" type="" url="http://friendfeed.com/static/images/friendblog.png"/>
+      <media:thumbnail height="66" width="255" url="http://friendfeed.com/static/images/friendblog.png"/>
     </media:group>
   </item>
 </channel>
