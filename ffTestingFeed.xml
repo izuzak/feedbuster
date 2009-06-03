@@ -6,7 +6,7 @@
 	<pubDate>Fri, 08 May 2009 17:13:00 +0000</pubDate> 
 	<language>en</language> 
 	<item> 
-		<title>api/feedtest image list expansion issue</title> 
+		<title>1. api/feedtest image list expansion test case</title> 
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:59 +0000</pubDate> 
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?059</guid> 
@@ -25,7 +25,7 @@
     </media:group> 
   </item>
 	<item> 
-		<title>visibility and autoresize for single image with no height/width set issue</title> 
+		<title>2. visibility and autoresize for single image with no height/width set test case</title> 
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:58 +0000</pubDate> 
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?058</guid> 
@@ -36,22 +36,22 @@
     </media:group> 
   </item>
   <item> 
-		<title>automatic resizing of oversized images issue</title> 
+		<title>3. automatic resizing of oversized images with height/width set test case</title> 
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:57 +0000</pubDate> 
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?057</guid> 
-		<description><![CDATA[ This test case includes a single image enclosure which has it's height/width attributes set. However, the image is larger than the maximum allowed, so the iamge is automatically resized. The interesting thing is that this is not done by resizing the image to the maximum allowed dimensions (525/175), but by halving the image dimensions several times. So, in result the image is rendered smaller than it could be with a smarter resizing method, as in the "visibility and autoresize" test case. ]]></description> 
+		<description><![CDATA[ This test case includes a single image enclosure which has it's height/width attributes set. However, the image is larger than the maximum allowed, so the image is automatically resized. The interesting thing is that this is not done by resizing the image to the maximum allowed dimensions (525/175), but by halving the image dimensions several times. So, in result the image is rendered smaller than it could be with a smarter resizing method, as in test case number 2. ]]></description> 
 		<media:group>
       <media:content height="506" width="400" type="image/jpeg" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
       <media:thumbnail height="506" width="400" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
     </media:group>
   </item>
   <item> 
-		<title>multiple images with at least one image with no height/width image set issue</title> 
+		<title>4. multiple images with at least one image with no height/width image set test case</title> 
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:56 +0000</pubDate> 
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?056</guid> 
-		<description><![CDATA[ This test case contains three image enclosures, two which do not have their height/width attributes set, and one that does. In http://friendfeed.com or http://friendfeed.com/api/feedtest only two images are shown - the first image without height/width attributes is shown (other images witout height/width attributes are not shown) and all iamges which do have height/width attributes set.]]>
+		<description><![CDATA[ This test case contains three image enclosures, two which do not have their height/width attributes set, and one that does. In http://friendfeed.com or http://friendfeed.com/api/feedtest only two images are shown - the first image without height/width attributes is shown (other images witout height/width attributes are not shown) and all images which do have height/width attributes set.]]>
     </description> 
 		<media:group>
       <media:content height="" width="" type="image/jpeg" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
@@ -67,22 +67,11 @@
     </media:group>
   </item>
   <item> 
-		<title>image type not set</title> 
+		<title>5. multiple images with no image type attribute set test case</title> 
 		<link>http://friendfeed.com/izuzak</link> 
 		<pubDate>Fri, 08 May 2009 17:13:55 +0000</pubDate> 
 		<guid isPermaLink="false">http://friendfeed.com/izuzak?055</guid> 
-		<description><![CDATA[ This is the same test case ]]></description> 
-		<media:group>
-      <media:content height="" width="" type="" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
-      <media:thumbnail height="" width="" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
-    </media:group> 
-  </item>
-  <item> 
-		<title>multiple images with no type</title> 
-		<link>http://friendfeed.com/izuzak</link> 
-		<pubDate>Fri, 08 May 2009 17:13:54 +0000</pubDate> 
-		<guid isPermaLink="false">http://friendfeed.com/izuzak?054</guid> 
-		<description><![CDATA[ This test case includes two image enclosures without the type attribute. Both iamges are correctly shown.]]>
+		<description><![CDATA[ This test case includes two image enclosures without the type attribute. Both images are correctly shown.]]>
     </description> 
 		<media:group>
       <media:content height="50" width="227" type="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
