@@ -66,21 +66,5 @@
       <media:thumbnail height="506" width="400" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
     </media:group>
   </item>
-  <item> 
-		<title>5. multiple images with no image type attribute set test case</title> 
-		<link>http://friendfeed.com/izuzak</link> 
-		<pubDate>Fri, 08 May 2009 17:13:55 +0000</pubDate> 
-		<guid isPermaLink="false">http://friendfeed.com/izuzak?055</guid> 
-		<description><![CDATA[ This test case includes two image enclosures without the type attribute. Both images are correctly shown.]]>
-    </description> 
-		<media:group>
-      <media:content height="50" width="227" type="" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
-      <media:thumbnail height="50" width="227" url="http://friendfeed.com/static/images/nano-logo.png?v=5ff0"/>
-    </media:group>
-    <media:group>
-      <media:content height="66" width="255" type="" url="http://friendfeed.com/static/images/friendblog.png"/>
-      <media:thumbnail height="66" width="255" url="http://friendfeed.com/static/images/friendblog.png"/>
-    </media:group>
-  </item>
 </channel>
 </rss>
