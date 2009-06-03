@@ -55,7 +55,12 @@
 		<media:group>
       <media:content height="506" width="400" type="image/jpeg" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
       <media:thumbnail height="506" width="400" url="http://i.friendfeed.com/d882df9f57adff9f6d05875fb9d8540cc0cafe13"/>
-    </media:group> 
+    </media:group>
+    <media:group>
+      <media:content height="182" width="890" type="image/jpeg" url="http://friendfeed.com/static/images/logo-matrix.gif"/>
+      <media:thumbnail height="182" width="890" url="http://friendfeed.com/static/images/logo-matrix.gif"/>
+    </media:group>     
+    http://i.friendfeed.com/62fd450c0d674ffc03558f5c52cbacd7225c3c46
   </item>
   <item> 
 		<title>resizing of oversized images issue</title> 
