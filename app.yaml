@@ -9,6 +9,7 @@ handlers:
 
 - url: /cache(.*)
   script: feed-buster.py
-  
+
 - url: .*
-  script: feed-buster.py
+  static_files : index.html
+  upload: index.html

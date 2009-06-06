@@ -67,27 +67,30 @@ class CacheControl(webapp.RequestHandler):
   def get(self):
     return str(memcache.flush_all())
     
-class Redirect(webapp.RequestHandler):
-  def get(self):
-    self.redirect("http://code.google.com/p/feed-buster/")
-    
 class MediaInjection(webapp.RequestHandler): 
+  paramsList = ['inputFeedUrl', 'version', 'webScrape', 'getDescription']
   
-  # simple api - http://vimeo.com/api/clip/2539741.json
-  # advanced api - vimeo.videos.getThumbnailUrl
   def getVimeoThumbnail(self, vimeoVideoId):
     vimeoApiCallUrl = 'http://vimeo.com/api/clip/%s.json' % vimeoVideoId
     vimeoApiResponseJson = FeedBusterUtils.fetchContentJSON(vimeoApiCallUrl)
     return vimeoApiResponseJson[0]['thumbnail_large'].replace('\\','')
   
-  # http://www.flickr.com/services/api/flickr.photos.getSizes.html
-  def getFlickrThumbnail(videoId):
+  def getFlickrThumbnail(self, videoId):
     flickrCallUrl = 'http://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key=5445c27bf055b4beda962ea058416078&photo_id=%s&format=json&nojsoncallback=1' % videoId
     flickrApiResponseJson = FeedBusterUtils.fetchContentJSON(flickrCallUrl)
     for size in flickrApiResponseJson['sizes']['size']:
       if size['label'] == 'Small':
         return size['source'].replace('\\','')
-    return Null
+    return None
+  
+  def getFlickrVideo(self, videoId):
+    flickrCallUrl = 'http://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key=5445c27bf055b4beda962ea058416078&photo_id=%s&format=json&nojsoncallback=1' % videoId
+    flickrApiResponseJson = FeedBusterUtils.fetchContentJSON(flickrCallUrl)
+    for size in flickrApiResponseJson['sizes']['size']:
+      if size['label'] == 'Site MP4':
+        return size['source']
+    return None
+    
   
   def maxResizeImage(self, imageWidth, imageHeight, maxImageWidth = 525.0, maxImageHeight = 175.0):
     imageWidth = float(imageWidth)
@@ -145,13 +148,18 @@ class MediaInjection(webapp.RequestHandler):
                   'thumbHeight' : '120',
                   'type' : 'application/x-shockwave-flash'}]
                 
-                # TODO: video - flickr
-                #<object type="application/x-shockwave-flash" width="500" height="375" data="http://www.flickr.com/apps/video/stewart.swf?v=71377" classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000">
-                #       <param name="flashvars" value="intl_lang=en-us&#038;photo_secret=0cd85ca6c8&#038;photo_id=3473039350"></param>
-                #       <param name="movie" value="http://www.flickr.com/apps/video/stewart.swf?v=71377"></param>
-                #       <param name="bgcolor" value="#000000"></param><param name="allowFullScreen" value="true"></param>
-                #       <embed type="application/x-shockwave-flash" src="http://www.flickr.com/apps/video/stewart.swf?v=71377" bgcolor="#000000" allowfullscreen="true" flashvars="intl_lang=en-us&#038;photo_secret=0cd85ca6c8&#038;photo_id=3473039350" height="375" width="500"></embed>
-                # </object>
+    #video - flickr
+    videoTags = re.findall(r'(<embed[^>]*? src=[\'"]{0,1}[^\'"]+?flickr.com/apps/video/stewart.swf[^\'"]+?["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
+    #self.response.out.write(str(videoTags))
+    for videoTag in videoTags:
+      videoId = re.search(r'.*?photo_id=(\d+)[\'"&].*?', videoTag, re.IGNORECASE)
+      videoId = videoId.group(1)
+      videos += [{'mediaType' : 'vid',
+          'url' : self.getFlickrVideo(videoId),
+          'thumb' : self.getFlickrThumbnail(videoId),
+          'thumbWidth' : '160',
+          'thumbHeight' : '120',
+          'type' : 'application/x-shockwave-flash'}]
                 
     # images
     imageTags = re.findall(r'(<img[^>]*?\ssrc=[\'"]{0,1}[^\'"]+["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
@@ -182,8 +190,10 @@ class MediaInjection(webapp.RequestHandler):
     return images+videos+audios
   
   def searchForMedia(self, soupString):
-    soupString = saxutils.unescape(str(soupString), {'&quot;' : '"'})
-    mediaSoup = BeautifulSoup.BeautifulSoup(soupString, fromEncoding='utf-8')
+    soupString = saxutils.unescape(soupString, {'&quot;' : '"'})
+    #soupString = str(soupString)
+    mediaSoup = BeautifulSoup.BeautifulSoup(soupString)#, fromEncoding='utf-8')
+
     images = []
     audios = []
     videos = []
@@ -193,7 +203,6 @@ class MediaInjection(webapp.RequestHandler):
       imageSrc = image['src'] if image.has_key('src') else None
       imageType = mimetypes.guess_type(str(imageSrc))[0]
       imageWidth = image['width'] if image.has_key('width') else None
-      #imageHeight = re.search(r'.*?style=[\'"]{0,1}[^\'"]*?height\s?:\s?(\d+)px[^\'"]*?["\'\s]{0,1}.*', imageTag, re.IGNORECASE)
       imageHeight = image['height'] if image.has_key('height') else None
 
       if not(imageWidth) or not(imageHeight) or not(imageType):
@@ -225,16 +234,16 @@ class MediaInjection(webapp.RequestHandler):
                     'thumbHeight' : '120',
                     'type' : 'application/x-shockwave-flash'}]
       elif video['src'].find("flickr.com/apps/video/stewart.swf") > -1:
-        videoId = re.search(r'.*?flickr\.com/apps/video/stewart\.swf?v=([^\'"#&?\s;]+).*?', video['src'], re.IGNORECASE).group(1)
+        videoId = re.search(r'.*?photo_id=(\d+)[\'"&].*?', video['flashvars'], re.IGNORECASE).group(1)
         videos += [{'mediaType' : 'vid',
-            'url' : 'http://www.flickr.com/apps/video/stewart\.swf?v=' + videoId,
+            'url' : self.getFlickrVideo(videoId),
             'thumb' : self.getFlickrThumbnail(videoId),
             'thumbWidth' : '160',
             'thumbHeight' : '120',
             'type' : 'application/x-shockwave-flash'}]
     
     # audio
-    for audio in mediaSoup.findAll("a", href = lambda url: url.endswith(".mp3")):
+    for audio in mediaSoup.findAll("a", href = lambda url: url and url.endswith(".mp3")):
       audios += [{'mediaType' : 'aud',
                   'url' : audio['href'],
                   'type' : 'audio/mpeg'}]
@@ -248,7 +257,7 @@ class MediaInjection(webapp.RequestHandler):
       crawledMedia += self.searchForMediaString(stringToParse)
     return crawledMedia
   
-  def createMediaNode(self, feedTree, mediaLink):
+  def createMediaNodeXML(self, feedTree, mediaLink):
     mediaType = mediaLink['mediaType']
     if mediaType == 'img':
       groupElem = feedTree.createElement('media:group')
@@ -303,7 +312,7 @@ class MediaInjection(webapp.RequestHandler):
     mediaType = mediaLink['mediaType']
 
     if mediaType == 'img':
-      groupTag = BeautifulSoup.Tag(feedSoup, "media:group", [("media", "http://search.yahoo.com/mrss/")])
+      groupTag = BeautifulSoup.Tag(feedSoup, "media:group", [("xmlns:media", "http://search.yahoo.com/mrss/")])
       contentTag = BeautifulSoup.Tag(feedSoup, "media:content", [("url", str(mediaLink["url"])), ("type", mediaLink["type"]), ("width", mediaLink["width"]), ("height", mediaLink["height"])])
       thumbTag = BeautifulSoup.Tag(feedSoup, "media:thumbnail", [("url", mediaLink["url"]), ("width", mediaLink["width"]), ("height", mediaLink["height"])])
       groupTag.append(contentTag)
@@ -326,7 +335,7 @@ class MediaInjection(webapp.RequestHandler):
     else:
       return None
   
-  def isAdvertising(self, url):
+  def isNotAdvertising(self, url):
     return True
 
   def isSmallImage(self, mediaItem):
@@ -347,8 +356,9 @@ class MediaInjection(webapp.RequestHandler):
       return feedUrl
   
   def get_old(self):
-    requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, ['inputFeedUrl', 'webScrape', 'getDescription']) 
-    feedUrl = self.processFeedUrl(requestParams['inputFeedUrl'])
+    #memcache.flush_all()
+    requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, MediaInjection.paramsList) 
+    feedUrl = self.filterFeedUrl(requestParams['inputFeedUrl'])
     webScrape = requestParams['webScrape'] if requestParams.has_key('webScrape') else None
     getDescription = int(requestParams['getDescription']) if requestParams.has_key('getDescription') else None
     feedTree = FeedBusterUtils.fetchContentDOM(feedUrl)
@@ -379,10 +389,11 @@ class MediaInjection(webapp.RequestHandler):
                 # crawl feed or web post
     feedItems = xpath.find(parsingParams['items'], feedTree.documentElement)
     crawledMedia = []
-
+    processedItems = 0
+    
     for feedItemIndex in range(len(feedItems)):
-      if feedItemIndex >= 4:
-        continue
+      if processedItems >= 12:
+        break
       feedItem = feedItems[feedItemIndex]
       itemId = xpath.find(parsingParams['id'], feedItem)
       if not(itemId):
@@ -397,13 +408,16 @@ class MediaInjection(webapp.RequestHandler):
         scrapedMediaLinks = cachedMedia['crawledMedia']
       else:
         if webScrape:
+          processedItems += 3
           linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
           linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
           scrapedMediaLinks = self.searchForMediaString(linkResultString)
         else:
+          processedItems += 1
           contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
           scrapedMediaLinks = self.searchForMediaDOM(contentCrawlNodes)
           if len(scrapedMediaLinks) == 0:
+            processedItems += 1
             descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
             scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
       
@@ -435,7 +449,7 @@ class MediaInjection(webapp.RequestHandler):
       # small images
       itemMedia['mediaLinks'] = filter(self.isSmallImage, itemMedia['mediaLinks'])
       # ads
-      itemMedia['mediaLinks'] = filter(self.isAdvertising, itemMedia['mediaLinks'])
+      itemMedia['mediaLinks'] = filter(self.isNotAdvertising, itemMedia['mediaLinks'])
       # write to cache
       memcache.set(itemMedia['cacheId'], {'itemHash' : itemMedia['itemHash'], 'crawledMedia' : itemMedia['mediaLinks']})
       
@@ -447,30 +461,30 @@ class MediaInjection(webapp.RequestHandler):
     #generate media enclosure XML elements
     for itemMedia in crawledMedia:
       for mediaLink in itemMedia['mediaLinks']:
-        mediaElem = self.createMediaNode(feedTree, mediaLink)
+        mediaElem = self.createMediaNodeXML(feedTree, mediaLink)
         itemMedia['feedNode'].appendChild(mediaElem)
           
-                # write output feed
+    # write output feed
     self.response.headers['Content-Type'] = 'application/%s+xml' % feedType
     self.response.out.write(feedTree.toxml())
     return
   
-  def get(self):
+  def get_new(self):
     #memcache.flush_all()
-    requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, ['inputFeedUrl', 'webScrape', 'getDescription']) 
+    requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, MediaInjection.paramsList) 
     feedUrl = self.filterFeedUrl(requestParams['inputFeedUrl'])
     webScrape = requestParams['webScrape'] if requestParams.has_key('webScrape') else None
-    getDescription = 100 #int(requestParams['getDescription']) if requestParams.has_key('getDescription') else None
+    getDescription = int(requestParams['getDescription']) if requestParams.has_key('getDescription') else None
 
     feedUrl = self.filterFeedUrl(feedUrl)
     if not(feedUrl): return
     
     feedString = FeedBusterUtils.fetchContent(feedUrl) 
-    originSoup = BeautifulSoup.BeautifulStoneSoup(feedString, fromEncoding='utf-8', selfClosingTags=['media:content', 'media:thumbnail'])
+    originSoup = BeautifulSoup.BeautifulStoneSoup(feedString, fromEncoding="utf-8", selfClosingTags=['media:content', 'media:thumbnail'])
     feedSoup = originSoup.find({'rss':True, 'feed':True}, recursive=False)
     if feedSoup is None: return
     feedType = feedSoup.name
-
+    
     if feedType == 'rss':
       soupParser = { 'items' : lambda feedSoup: feedSoup.channel.findAll(['item'], recursive=False), 
                      'link' : lambda itemSoup: itemSoup.find(["link", "origLink"], recursive=False),
@@ -480,13 +494,14 @@ class MediaInjection(webapp.RequestHandler):
                      'description' : lambda itemSoup: itemSoup.find(["description"], recursive=False),
                      'content' : lambda itemSoup: itemSoup.find(["content:encoded"], recursive=False),
                      'existingMedia' : lambda itemSoup: itemSoup.findAll(["media:thumbnail", "media:content", "media:group"], recursive=True)}
-    elif feedType == 'atom':
+    elif feedType == 'feed':
+      feedType = 'atom'
       def getLink(itemSoup): 
         retVal = itemSoup.find(["link"], rel="alternate", recursive=False)
         if not(retVal):
           retVal = itemSoup.find(["link"], rel=None, recursive=False)
         return retVal['href']
-      soupParser = { 'items' : lambda feedSoup: feedSoup.channel.findAll(['entry'], recursive=False), 
+      soupParser = { 'items' : lambda feedSoup: feedSoup.findAll(['entry'], recursive=False), 
                      'link' : getLink, 
                      'id' : lambda itemSoup: itemSoup.find(["id"], recursive=False),
                      'updated' : lambda itemSoup: itemSoup.find(["updated"], recursive=False),
@@ -501,11 +516,11 @@ class MediaInjection(webapp.RequestHandler):
     feedItems = soupParser['items'](feedSoup)
     crawledMedia = []
     processedItems = 0
+    
     for feedItemIndex in range(len(feedItems)):
-      if processedItems >= 8:
-        continue
+      if processedItems >= 12:
+        break
       feedItem = feedItems[feedItemIndex]
-      
       itemId = soupParser['id'](feedItem) 
       if not(itemId):
         itemId = soupParser['link'](feedItem).string
@@ -523,30 +538,53 @@ class MediaInjection(webapp.RequestHandler):
       cachedMedia = memcache.get(cacheId)
       if cachedMedia and cachedMedia['itemHash'] == itemHash:
         scrapedMediaLinks = cachedMedia['crawledMedia']
-      else:
-        processedItems += 1
-        
+      else:        
         #self.response.out.write("crawl0\n")
         if webScrape:
           linkNodeUrl = soupParser['link'](feedItem).string
           linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
-          scrapedMediaLinks = self.searchForMedia(linkResultString, webScrape)
-          processedItems += 1
+          scrapedMediaLinks = self.searchForMedia(linkResultString)
+          processedItems += 3
           #self.response.out.write("crawl1\n")
         else:
           #self.response.out.write("crawl2\n")
           contentNode = soupParser['content'](feedItem)
+          processedItems += 1
           if contentNode:
-            content = "".join([unicode(j) for j in contentNode])
-            scrapedMediaLinks = self.searchForMedia(content)
-            #self.response.out.write("crawl3\n")
+            try:
+              content = "".join([j for j in contentNode])
+              scrapedMediaLinks = self.searchForMedia(content)
+            except:
+              try:
+                content = "".join([j for j in contentNode])
+                content = saxutils.unescape(content, {'&quot;' : '"'})
+                scrapedMediaLinks = self.searchForMediaString(content)
+              except:
+                continue  
           if not(contentNode) or len(scrapedMediaLinks) == 0:
+            #continue
+            processedItems += 1
             descriptionCrawlNode = soupParser['description'](feedItem)
             if descriptionCrawlNode:
-              descriptionSoup = "".join([unicode(j) for j in descriptionCrawlNode])
-              scrapedMediaLinks = self.searchForMedia(descriptionSoup)
-              #self.response.out.write(str(scrapedMediaLinks) + "crawl4\n")
-              #self.response.out.write("crawl4\n")
+              #self.response.out.write(saxutils.unescape(descriptionSoup, {'&quot;' : '"'}) + "crawl4\n")
+              try:
+                descriptionSoup = "".join([j for j in descriptionCrawlNode])
+                scrapedMediaLinks = self.searchForMedia(descriptionSoup)
+              except:
+                try:
+                  descriptionSoup = "".join([j for j in descriptionCrawlNode])
+                  descriptionSoup = saxutils.unescape(descriptionSoup, {'&quot;' : '"'})
+                  scrapedMediaLinks = self.searchForMediaString(descriptionSoup)
+                except:
+                  continue  
+              #self.response.out.write("error!!!!\n\n\n"+ saxutils.unescape(descriptionSoup, {'&quot;' : '"'})+"\n\n\n\n")
+              #continue
+              #descriptionSoup = saxutils.unescape(descriptionSoup, {'&quot;' : '"'})
+              #descriptionSoup = descriptionSoup.decode()
+              #sp1 = BeautifulSoup.BeautifulSoup(descriptionSoup, fromEncoding="utf-8")
+              #self.response.out.write(descriptionSoup)
+              #self.response.out.write(str(scrapedMediaLinks) + "conter\n")
+              #continue
             if not(descriptionCrawlNode) or len(scrapedMediaLinks) == 0:
               #self.response.out.write("crawl5\n")
               continue
@@ -569,7 +607,7 @@ class MediaInjection(webapp.RequestHandler):
 
       
       crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId, 'description' : description}]
-
+    
     # count repeated links
     mediaCount = {}
     for itemMedia in crawledMedia:
@@ -583,7 +621,7 @@ class MediaInjection(webapp.RequestHandler):
       # small images
       itemMedia['mediaLinks'] = filter(self.isSmallImage, itemMedia['mediaLinks'])
       # ads
-      itemMedia['mediaLinks'] = filter(self.isAdvertising, itemMedia['mediaLinks'])
+      itemMedia['mediaLinks'] = filter(self.isNotAdvertising, itemMedia['mediaLinks'])
       # write to cache
       memcache.set(itemMedia['cacheId'], {'itemHash' : itemMedia['itemHash'], 'crawledMedia' : itemMedia['mediaLinks']})
       
@@ -602,8 +640,21 @@ class MediaInjection(webapp.RequestHandler):
     self.response.headers['Content-Type'] = 'application/%s+xml' % feedType
     self.response.out.write(str(originSoup))
     return           
-      
-application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection), ('/cache.*', CacheControl), ('.*', Redirect)], debug=True)
+    
+  def get(self):
+    requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, MediaInjection.paramsList) 
+    if requestParams.has_key('version'):
+      if requestParams['version'] == "old":
+        #self.response.out.write("1")
+        return self.get_old()
+      elif requestParams['version'] == "new":
+        #self.response.out.write("2")
+        return self.get_new()
+    else:
+      #self.response.out.write("1")
+      return self.get_old()
+    
+application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection), ('/cache.*', CacheControl)], debug=True)
 
 def main():
   run_wsgi_app(application)

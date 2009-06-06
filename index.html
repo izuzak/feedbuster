@@ -1,0 +1,83 @@
+<html>
+  <title> FeedBuster </title>
+  <head>
+    <style type="text/css">
+      body {
+        background-color:#ffffff;
+        color:#000000;
+        font-family:arial,sans-serif
+      }
+    </style> 
+    <script type="text/javascript">
+      function generate() {
+        var inputUrl = document.getElementById("inputUrl").value;
+        var outputUrl = "http://feed-buster.appspot.com/mediaInjection?inputFeedUrl=" + inputUrl;
+        document.getElementById("outputUrl").value = outputUrl;
+      }
+    </script>
+  </head>
+  <body> 
+      <div id="wikicontent" style="margin-left:auto; margin-left: 60px; width:640px;"> 
+ <h1><a name="What_is_feed-buster?"/>Feed-buster</h1>
+ <p align="justify">Feed-buster is a collection of AppEngine services for remixing RSS and ATOM feeds. Currently, the only service is MediaInjection which injects media enclosure links into feed posts based on media present in the item description and content</p>
+ <p align="justify">Media enclosures are special RSS/ATOM tags that identify rich media content in feed posts. The Media injection service automatically inserts media enclosure tags into RSS/ATOM feeds that do not have them. The service scrapes feed posts for rich media, generates and inserts media tags back into the feed for each post, and outputs the resulting feed.</p>
+ <p align="justify"> Why do this? Some feed-based applications, like <a href="http://friendfeed.com">FriendFeed</a>, generate their UIs based on media present in feeds. These applications don&#x27;t crawl the content of feed posts for media items, rather just look for special media tags that identify this media. Therefore, if no media tags are present, the UI will not contain any rich media like images and videos, and this causes bad user experience.</p>
+  <p align="justify">Currently, feed-buster scrapes images, Mp3 audio links, YouTube embedded videos and Vimeo embedded videos. Support for other media is on the way. </p>
+ <h1><a name="Service_API"/>Service API</h1>
+ <p align="justify">Media injection is a simple HTTP service: you pass it a feed URL in a GET request URL parameter, and it returns the modified feed as the result. Just replace <i>FEED_URL</i> with your RSS or ATOM feed URL in <u>http://feed-buster.appspot.com/mediaInjection?inputFeedUrl=<i>FEED_URL</i></u> and use this URL as the new feed URL. </p> <p align="justify"> Or simply use this form to do the same thing:</p>
+  </div>
+    <table name="frm" id="frm" style="margin-left: 60px; ">
+      <tr>
+        <td>
+          <label for="inputUrl">Your RSS/ATOM feed URL:</label>
+        </td>
+        <tr></tr>
+        <td>
+          <input style="width:300px" name="inputUrl" id="inputUrl" type="text" value="">
+        </td>
+      </tr>
+      <tr></tr>
+      <tr><td>
+      <button name="genBtn" id="genBtn" onclick="generate();">Generate feed-buster URL</button>
+      </td>
+      </tr>
+      <tr></tr>
+      <tr>
+      <td>
+      <label for="outputUrl">Feed-buster feed URL:</label>
+      </td><tr></tr><td>
+      <input style="width:300px" name="outputUrl" id="outputUrl" type="text" value="">
+      </td>
+      </tr>
+    </table>
+    <div id="wikicontent" style="padding:0 3em 1.2em 0; margin-left:auto; margin-left: 60px; width:640px;"> 
+    <p align="justify">Copy/paste the output URL and try the new feed out on the <a href="http://frinedfeed.com/api/feedtest" target="_blank">FriendFeed feedtest page</a>!
+    <h1><a name="Feedback"/>Feedback and information:</h1><p>Project homepage: <a href="http://code.google.com/p/feed-buster" >Feed-buster on Google Code</a>. </p><p>FriendFeed feedback room: <a href="http://friendfeed.com/feed-buster" >feed-buster</a>. </p> 
+<p>Twitter: <a href="http://twitter.com/izuzak" rel="nofollow">@izuzak</a>. </p>    </div>
+      <table style="margin-left:50px;">
+      <tr style="margin-left:50px;">
+      <td>
+      <div id="pwrTxt" style="margin: 5px; padding: 5px; vertical-align: middle;">
+        Powered by:
+      </div>
+      </td>
+      <td>
+      <div id="aeBtn" style="margin: 5px; padding: 5px; vertical-align: middle;">
+        <a href="http://code.google.com/appengine/">
+          <img src="http://code.google.com/appengine/images/appengine-silver-120x30.gif" alt="Powered by Google App Engine" />
+        </a>
+      </div>
+      </td>      
+      </tr>
+      </table>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-5997170-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+  </body>
+<html>
