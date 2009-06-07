@@ -5,10 +5,10 @@ import urllib
 import urlparse
 import mimetypes
 import xpath
-import BeautifulSoup
 
 import math
 from xml.dom import minidom
+import urlparse
 from xml.sax import saxutils 
 from django.utils import simplejson 
 from google.appengine.api import memcache
@@ -63,6 +63,13 @@ class FeedBusterUtils():
     else:
       return None
   
+  @staticmethod
+  def stripHtmlTags(htmlString):
+    htmlString = re.sub(r'(?i)((<head[^>]*?>.*?</head>)|(<style[^>]*?>.*?</style>)|(<script[^>]*?>.*?</script>)|(<object[^>]*?>.*?</object>)|(<embed[^>]*?>.*?</embed>)|(<applet[^>]*?>.*?</applet>)|(<noframes[^>]*?>.*?</noframes>)|(<noscript[^>]*?>.*?</noscript>)|(<noembed[^>]*?>.*?</noembed>))', ' ', htmlString) 
+    htmlString = re.sub(r'(?i)(</((address)|(blockquote)|(center)|(del)|(div)|(h[1-9])|(ins)|(isindex)|(p)|(pre)|(dir)|(dl)|(dt)|(dd)|(li)|(menu)|(ol)|(ul)|(table)|(th)|(td)|(caption)|(form)|(button)|(fieldset)|(legend)|(input)|(label)|(select)|(optgroup)|(option)|(textarea)|(frameset)|(frame)|(iframe))>)', r'\1\n', htmlString)
+    htmlString = re.sub(r'<.*?>', '', htmlString)
+    return htmlString
+    
 class CacheControl(webapp.RequestHandler):
   def get(self):
     return str(memcache.flush_all())
@@ -93,6 +100,8 @@ class MediaInjection(webapp.RequestHandler):
     
   
   def maxResizeImage(self, imageWidth, imageHeight, maxImageWidth = 525.0, maxImageHeight = 175.0):
+    if imageWidth == "" or imageHeight == "":
+      return imageWidth, imageHeight
     imageWidth = float(imageWidth)
     imageHeight = float(imageHeight)
     if imageWidth < maxImageWidth and imageHeight < maxImageHeight:
@@ -176,10 +185,13 @@ class MediaInjection(webapp.RequestHandler):
       if not(imageWidth) or not(imageHeight) or not(imageType):
         imageProperties = self.getImageProperties(imageSrc)
         if not(imageProperties):
-          continue
-        imageWidth = imageProperties['width']
-        imageHeight = imageProperties['height']
-        imageType = imageProperties['mimeType']
+          imageHeight = imageHeight.group(1) if imageHeight else ""
+          imageWidth = imageWidth.group(1) if imageWidth else ""
+          imageType = imageType if imageType else ""
+        else:
+          imageWidth = imageProperties['width']
+          imageHeight = imageProperties['height']
+          imageType = imageProperties['mimeType']
       else:
         imageWidth = imageWidth.group(1)
         imageHeight = imageHeight.group(1)
@@ -256,8 +268,23 @@ class MediaInjection(webapp.RequestHandler):
       stringToParse = saxutils.unescape(nodeToCrawl.toxml(), {'&quot;' : '"'})
       crawledMedia += self.searchForMediaString(stringToParse)
     return crawledMedia
+    
+  def fixRelativeUrls(self, linkNodeUrl, scrapedMediaLinks):
+    for mediaLink in scrapedMediaLinks:
+      mediaLink['url'] = urlparse.urljoin(linkNodeUrl, mediaLink['url'])
+    return scrapedMediaLinks
   
-  def createMediaNodeXML(self, feedTree, mediaLink):
+  def addDescription(self, feedTree, descriptionText, oldDescriptions, mediaParent):
+    if descriptionText:
+      for oldDescription in oldDescriptions:
+        mediaParent.removeChild(oldDescription)
+      descriptionElem = feedTree.createElement('description')
+      descrText = feedTree.createTextNode(descriptionText)
+      descriptionElem.appendChild(descrText)
+      mediaParent.appendChild(descriptionElem)
+    return
+    
+  def addMediaNode(self, feedTree, mediaLink, mediaParent):
     mediaType = mediaLink['mediaType']
     if mediaType == 'img':
       groupElem = feedTree.createElement('media:group')
@@ -276,7 +303,7 @@ class MediaInjection(webapp.RequestHandler):
       
       groupElem.appendChild(contentElem)
       groupElem.appendChild(thumbElem)
-      return groupElem
+      mediaParent.appendChild(groupElem)
     elif mediaType == 'vid':
       groupElem = feedTree.createElement('media:group')
       groupElem.setAttribute('xmlns:media','http://search.yahoo.com/mrss/')
@@ -294,7 +321,7 @@ class MediaInjection(webapp.RequestHandler):
       
       groupElem.appendChild(thumbElem)  
       groupElem.appendChild(contentElem)
-      return groupElem
+      mediaParent.appendChild(groupElem)
     elif mediaType == 'aud':
       groupElem = feedTree.createElement('media:group')
       groupElem.setAttribute('xmlns:media','http://search.yahoo.com/mrss/')
@@ -304,9 +331,8 @@ class MediaInjection(webapp.RequestHandler):
       contentElem.setAttribute('type', mediaLink['type'])
       
       groupElem.appendChild(contentElem)
-      return groupElem
-    else:
-      return None
+      mediaParent.appendChild(groupElem)
+    return         
   
   def createMediaNode(self, feedSoup, mediaLink):
     mediaType = mediaLink['mediaType']
@@ -340,7 +366,7 @@ class MediaInjection(webapp.RequestHandler):
 
   def isSmallImage(self, mediaItem):
     if mediaItem['mediaType']=='img':
-      if mediaItem.has_key('width') and mediaItem.has_key('height'):
+      if mediaItem.has_key('width') and mediaItem.has_key('height') and mediaItem['width'] != "" and mediaItem['height'] != "":
         if int(mediaItem['width'].replace("%", "")) <= 20 or int(mediaItem['height'].replace("%", "")) <= 20:
           return False
         else:
@@ -392,7 +418,7 @@ class MediaInjection(webapp.RequestHandler):
     processedItems = 0
     
     for feedItemIndex in range(len(feedItems)):
-      if processedItems >= 12:
+      if processedItems >= 10 or feedItemIndex >= 10:
         break
       feedItem = feedItems[feedItemIndex]
       itemId = xpath.find(parsingParams['id'], feedItem)
@@ -404,14 +430,18 @@ class MediaInjection(webapp.RequestHandler):
       cacheId = itemId + (('_' + webScrape) if webScrape else "")
       
       cachedMedia = memcache.get(cacheId)
+      newDescription = None
       if cachedMedia and cachedMedia['itemHash'] == itemHash:
         scrapedMediaLinks = cachedMedia['crawledMedia']
+        if cachedMedia.has_key("newDescription"):
+          newDescription = cachedMedia['newDescription']
       else:
         if webScrape:
-          processedItems += 3
+          processedItems += 4
           linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
           linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
           scrapedMediaLinks = self.searchForMediaString(linkResultString)
+          scrapedMediaLinks = self.fixRelativeUrls(linkNodeUrl, scrapedMediaLinks)
         else:
           processedItems += 1
           contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
@@ -420,18 +450,18 @@ class MediaInjection(webapp.RequestHandler):
             processedItems += 1
             descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
             scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
+        
+        if getDescription:
+          newDescription = xpath.find(parsingParams['content'], feedItem)[0].firstChild.data
+          newDescription = saxutils.unescape(newDescription, {'&quot;' : '"'})
+          newDescription = FeedBusterUtils.stripHtmlTags(newDescription)
+          if len(newDescription) > getDescription:
+            newDescription = newDescription[0:getDescription-3] + "..."
+          else:
+            newDescription = newDescription[0:getDescription]
       
-      if getDescription:
-        return
-        # todo - http://nadeausoftware.com/articles/2007/09/php_tip_how_strip_html_tags_web_page
-        # provjeri jel uopce ima contenta
-        # newDescription = xpath.find(parsingParams['content'], feedItem)[0].firstChild()
-        # newDescription = saxutils.unescape(newDescription.toxml(), {'&quot;' : '"'})
-        # self.response.out.write(newDescription)
-        # newDescription = re.sub(r'<.*?>', '', newDescription)[0:getDescription]
-        # self.response.out.write(newDescription)
+      crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId, 'newDescription' : newDescription}]
       
-      crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId}]
       existingMedia = xpath.find(parsingParams['existingMedia'], feedItem)
       for existingMediaItem in existingMedia:
         feedItem.removeChild(existingMediaItem)
@@ -457,12 +487,15 @@ class MediaInjection(webapp.RequestHandler):
     for itemMedia in crawledMedia:
       # repeated media
       itemMedia['mediaLinks'] = filter(lambda x: mediaCount[x['url']]<3, itemMedia['mediaLinks'])
-
+    
     #generate media enclosure XML elements
     for itemMedia in crawledMedia:
+      feedNode = itemMedia['feedNode']
+      newDescription = itemMedia['newDescription']
+      descriptionNode = xpath.find(parsingParams['description'], feedNode)
+      self.addDescription(feedTree, newDescription, descriptionNode, feedNode)
       for mediaLink in itemMedia['mediaLinks']:
-        mediaElem = self.createMediaNodeXML(feedTree, mediaLink)
-        itemMedia['feedNode'].appendChild(mediaElem)
+        self.addMediaNode(feedTree, mediaLink, feedNode)
           
     # write output feed
     self.response.headers['Content-Type'] = 'application/%s+xml' % feedType
@@ -470,6 +503,7 @@ class MediaInjection(webapp.RequestHandler):
     return
   
   def get_new(self):
+    import BeautifulSoup
     #memcache.flush_all()
     requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, MediaInjection.paramsList) 
     feedUrl = self.filterFeedUrl(requestParams['inputFeedUrl'])
