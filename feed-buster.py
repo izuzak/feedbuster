@@ -8,7 +8,6 @@ import xpath
 
 import math
 from xml.dom import minidom
-import urlparse
 from xml.sax import saxutils 
 from django.utils import simplejson 
 from google.appengine.api import memcache
@@ -19,6 +18,10 @@ from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 
 class FeedBusterUtils():
+  StripHtmlContentTagsRE = re.compile(r'(?i)((<head[^>]*?>.*?</head>)|(<style[^>]*?>.*?</style>)|(<script[^>]*?>.*?</script>)|(<object[^>]*?>.*?</object>)|(<embed[^>]*?>.*?</embed>)|(<applet[^>]*?>.*?</applet>)|(<noframes[^>]*?>.*?</noframes>)|(<noscript[^>]*?>.*?</noscript>)|(<noembed[^>]*?>.*?</noembed>))')
+  InsertNewlineAfterTagsRE = re.compile(r'(?i)(</((address)|(blockquote)|(center)|(del)|(div)|(h[1-9])|(ins)|(isindex)|(p)|(pre)|(dir)|(dl)|(dt)|(dd)|(li)|(menu)|(ol)|(ul)|(table)|(th)|(td)|(caption)|(form)|(button)|(fieldset)|(legend)|(input)|(label)|(select)|(optgroup)|(option)|(textarea)|(frameset)|(frame)|(iframe))>)')
+  StripAllHtmlTagsRE = re.compile(r'<.*?>')
+  
   @staticmethod
   def getRequestParams(requestQueryString, paramsList):
     requestQueryString = "&" + requestQueryString
@@ -65,9 +68,9 @@ class FeedBusterUtils():
   
   @staticmethod
   def stripHtmlTags(htmlString):
-    htmlString = re.sub(r'(?i)((<head[^>]*?>.*?</head>)|(<style[^>]*?>.*?</style>)|(<script[^>]*?>.*?</script>)|(<object[^>]*?>.*?</object>)|(<embed[^>]*?>.*?</embed>)|(<applet[^>]*?>.*?</applet>)|(<noframes[^>]*?>.*?</noframes>)|(<noscript[^>]*?>.*?</noscript>)|(<noembed[^>]*?>.*?</noembed>))', ' ', htmlString) 
-    htmlString = re.sub(r'(?i)(</((address)|(blockquote)|(center)|(del)|(div)|(h[1-9])|(ins)|(isindex)|(p)|(pre)|(dir)|(dl)|(dt)|(dd)|(li)|(menu)|(ol)|(ul)|(table)|(th)|(td)|(caption)|(form)|(button)|(fieldset)|(legend)|(input)|(label)|(select)|(optgroup)|(option)|(textarea)|(frameset)|(frame)|(iframe))>)', r'\1\n', htmlString)
-    htmlString = re.sub(r'<.*?>', '', htmlString)
+    htmlString = FeedBusterUtils.StripHtmlContentTagsRE.sub(' ', htmlString) 
+    htmlString = FeedBusterUtils.InsertNewlineAfterTagsRE.sub(r'\1\n', htmlString)
+    htmlString = FeedBusterUtils.StripAllHtmlTagsRE.sub('', htmlString)
     return htmlString
     
 class CacheControl(webapp.RequestHandler):
@@ -77,13 +80,30 @@ class CacheControl(webapp.RequestHandler):
 class MediaInjection(webapp.RequestHandler): 
   paramsList = ['inputFeedUrl', 'version', 'webScrape', 'getDescription']
   
+  ImageTagSearchRE = re.compile(r'(<img[^>]*?\ssrc=[\'"]{0,1}[^\'"]+["\'\s]{0,1}[^>]*?>)', re.IGNORECASE)
+  ImageSrcRE = re.compile(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', re.IGNORECASE)
+  ImageWidthRE = re.compile(r'(.*?width=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?)|(.*?style=[\'"]{0,1}[^\'"]*?width\s?:\s?(\d+)px[^\'"]*?["\'\s]{0,1}.*)', re.IGNORECASE)
+  ImageHeightRE = re.compile(r'(.*?height=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?)|(.*?style=[\'"]{0,1}[^\'"]*?height\s?:\s?(\d+)px[^\'"]*?["\'\s]{0,1}.*)', re.IGNORECASE)
+  
+  FlickrTagSearchRE = re.compile(r'(<embed[^>]*? src=[\'"]{0,1}[^\'"]+?flickr.com/apps/video/stewart.swf[^\'"]+?["\'\s]{0,1}[^>]*?>)', re.IGNORECASE)
+  FlickrPhotoIDRE = re.compile(r'.*?photo_id=(\d+)[\'"&].*?', re.IGNORECASE)
+  YoutubeTagSearchRE = re.compile(r'(<embed[^>]*? src=[\'"]{0,1}[^\'"]+?youtube\.com/v/[^\'"]+?["\'\s]{0,1}[^>]*?>)', re.IGNORECASE)
+  YoutubePhotoIDRE = re.compile(r'.*?src=[\'"]{0,1}[^\'"]+?youtube.com/v/([^\'"#&?\s;]+)[^\'"]+?["\'\s]{0,1}.*?', re.IGNORECASE)
+  VimeoTagSearchRE = re.compile(r'(<embed[^>]*? src=[\'"]{0,1}[^\'"]+?vimeo.com/moogaloop.swf[^\'"]+?["\'\s]{0,1}[^>]*?>)', re.IGNORECASE)
+  VimeoPhotoIDRE = re.compile(r'.*?src=[\'"]{0,1}[^\'"]+?vimeo\.com/moogaloop\.swf\?clip_id=([^\'"#&?\s;]+)[^\'"]+?["\'\s]{0,1}.*?', re.IGNORECASE)
+  AudioTagSearchRE = re.compile(r'(<a[^>]*? href=[\'"]{0,1}[^\'"]+\.mp3["\'\s]{0,1}[^>]*?>)', re.IGNORECASE)
+  AudioSrcRE = re.compile(r'.*?href=[\'"]{0,1}([^\'"]+\.mp3)["\'\s]{0,1}.*?', re.IGNORECASE)
+  
+  VimeoAPICallUrl = 'http://vimeo.com/api/clip/%s.json'
+  FlickrApiCallUrl = 'http://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key=5445c27bf055b4beda962ea058416078&photo_id=%s&format=json&nojsoncallback=1'
+  Img2JSONApiCallUrl = 'http://img2json.appspot.com/go/?url=%s'
   def getVimeoThumbnail(self, vimeoVideoId):
-    vimeoApiCallUrl = 'http://vimeo.com/api/clip/%s.json' % vimeoVideoId
+    vimeoApiCallUrl = MediaInjection.VimeoAPICallUrl % vimeoVideoId
     vimeoApiResponseJson = FeedBusterUtils.fetchContentJSON(vimeoApiCallUrl)
     return vimeoApiResponseJson[0]['thumbnail_large'].replace('\\','')
   
   def getFlickrThumbnail(self, videoId):
-    flickrCallUrl = 'http://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key=5445c27bf055b4beda962ea058416078&photo_id=%s&format=json&nojsoncallback=1' % videoId
+    flickrCallUrl = MediaInjection.FlickrApiCallUrl % videoId
     flickrApiResponseJson = FeedBusterUtils.fetchContentJSON(flickrCallUrl)
     for size in flickrApiResponseJson['sizes']['size']:
       if size['label'] == 'Small':
@@ -91,7 +111,7 @@ class MediaInjection(webapp.RequestHandler):
     return None
   
   def getFlickrVideo(self, videoId):
-    flickrCallUrl = 'http://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key=5445c27bf055b4beda962ea058416078&photo_id=%s&format=json&nojsoncallback=1' % videoId
+    flickrCallUrl = FlickrApiCallUrl % videoId
     flickrApiResponseJson = FeedBusterUtils.fetchContentJSON(flickrCallUrl)
     for size in flickrApiResponseJson['sizes']['size']:
       if size['label'] == 'Site MP4':
@@ -113,7 +133,7 @@ class MediaInjection(webapp.RequestHandler):
       return str(int(math.floor(imageWidth/reduction))), str(int(math.floor(imageHeight/reduction)))
       
   def getImageProperties(self, imageUrl):
-    serviceCallUrl = 'http://img2json.appspot.com/go/?url='+imageUrl
+    serviceCallUrl = MediaInjection.Img2JSONApiCallUrl % imageUrl
     serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
     imageInfo = simplejson.loads(serviceResultJson.replace("\\x00","").replace("'",'"').replace(";","")) if serviceResultJson else None
     if imageInfo is None or imageInfo.has_key('error'):
@@ -128,28 +148,28 @@ class MediaInjection(webapp.RequestHandler):
     videos = []
                 
     #audio
-    audioTags = re.findall(r'(<a[^>]*? href=[\'"]{0,1}[^\'"]+\.mp3["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
+    audioTags = MediaInjection.AudioTagSearchRE.findall(stringToParse)
     for audioTag in audioTags:
-      audioSrc = re.search(r'.*?href=[\'"]{0,1}([^\'"]+\.mp3)["\'\s]{0,1}.*?', audioTag, re.IGNORECASE)
+      audioSrc = MediaInjection.AudioSrcRE.search(audioTag).group(1)
       audios += [{'mediaType' : 'aud',
-                  'url' : audioSrc.group(1),
+                  'url' : audioSrc,
                   'type' : 'audio/mpeg'}]
+    
     #video - vimeo 
-    videoTags = re.findall(r'(<embed[^>]*? src=[\'"]{0,1}[^\'"]+?vimeo.com/moogaloop.swf[^\'"]+?["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
+    videoTags = MediaInjection.VimeoTagSearchRE.findall(stringToParse)
     for videoTag in videoTags:
-      videoId = re.search(r'.*?src=[\'"]{0,1}[^\'"]+?vimeo\.com/moogaloop\.swf\?clip_id=([^\'"#&?\s;]+)[^\'"]+?["\'\s]{0,1}.*?', videoTag, re.IGNORECASE)
-      videoId = videoId.group(1)
+      videoId = MediaInjection.VimeoPhotoIDRE.search(videoTag).group(1)
       videos += [{'mediaType' : 'vid',
                   'url' : 'http://vimeo.com/moogaloop.swf?clip_id=' + videoId,
                   'thumb' : self.getVimeoThumbnail(videoId),
                   'thumbWidth' : '160',
                   'thumbHeight' : '120',
                   'type' : 'application/x-shockwave-flash'}]
+    
     #video - youtube
-    videoTags = re.findall(r'(<embed[^>]*? src=[\'"]{0,1}[^\'"]+?youtube\.com/v/[^\'"]+?["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
+    videoTags = MediaInjection.YoutubeTagSearchRE.findall(stringToParse)
     for videoTag in videoTags:
-      videoId = re.search(r'.*?src=[\'"]{0,1}[^\'"]+?youtube.com/v/([^\'"#&?\s;]+)[^\'"]+?["\'\s]{0,1}.*?', videoTag, re.IGNORECASE)
-      videoId = videoId.group(1)
+      videoId = MediaInjection.YoutubePhotoIDRE.search(videoTag).group(1)
       videos += [{'mediaType' : 'vid',
                   'url' : 'http://www.youtube.com/v/' + videoId,
                   'thumb' : 'http://img.youtube.com/vi/' + videoId + '/2.jpg',
@@ -158,11 +178,9 @@ class MediaInjection(webapp.RequestHandler):
                   'type' : 'application/x-shockwave-flash'}]
                 
     #video - flickr
-    videoTags = re.findall(r'(<embed[^>]*? src=[\'"]{0,1}[^\'"]+?flickr.com/apps/video/stewart.swf[^\'"]+?["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
-    #self.response.out.write(str(videoTags))
+    videoTags = MediaInjection.FlickrTagSearchRE.findall(stringToParse)
     for videoTag in videoTags:
-      videoId = re.search(r'.*?photo_id=(\d+)[\'"&].*?', videoTag, re.IGNORECASE)
-      videoId = videoId.group(1)
+      videoId = MediaInjection.FlickrPhotoIDRE.search(videoTag).group(1)
       videos += [{'mediaType' : 'vid',
           'url' : self.getFlickrVideo(videoId),
           'thumb' : self.getFlickrThumbnail(videoId),
@@ -171,37 +189,33 @@ class MediaInjection(webapp.RequestHandler):
           'type' : 'application/x-shockwave-flash'}]
                 
     # images
-    imageTags = re.findall(r'(<img[^>]*?\ssrc=[\'"]{0,1}[^\'"]+["\'\s]{0,1}[^>]*?>)', stringToParse, re.IGNORECASE)
+    imageTags = MediaInjection.ImageTagSearchRE.findall(stringToParse)
     for imageTag in imageTags:
-      imageSrc = re.search(r'.*?src=[\'"]{0,1}([^\s\'"]+)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE).group(1)
+      imageSrc = MediaInjection.ImageSrcRE.search(imageTag).group(1)
       imageType = mimetypes.guess_type(imageSrc)[0]
-      imageWidth = re.search(r'.*?width=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-      if not(imageWidth):
-        imageWidth = re.search(r'.*?style=[\'"]{0,1}[^\'"]*?width\s?:\s?(\d+)px[^\'"]*?["\'\s]{0,1}.*', imageTag, re.IGNORECASE)
-      imageHeight = re.search(r'.*?height=[\'"]{0,1}(\d+%?)["\'\s]{0,1}.*?', imageTag, re.IGNORECASE)
-      if not(imageHeight):
-        imageHeight = re.search(r'.*?style=[\'"]{0,1}[^\'"]*?height\s?:\s?(\d+)px[^\'"]*?["\'\s]{0,1}.*', imageTag, re.IGNORECASE)
-        
+      imageWidth = MediaInjection.ImageWidthRE.search(imageTag)
+      imageHeight = MediaInjection.ImageHeightRE.search(imageTag)
+
       if not(imageWidth) or not(imageHeight) or not(imageType):
         imageProperties = self.getImageProperties(imageSrc)
         if not(imageProperties):
-          imageHeight = imageHeight.group(1) if imageHeight else ""
-          imageWidth = imageWidth.group(1) if imageWidth else ""
+          imageHeight = (imageHeight.group(2) if imageHeight.group(2) else imageHeight.group(4)) if imageHeight else ""
+          imageWidth = (imageWidth.group(2) if imageWidth.group(2) else imageWidth.group(4)) if imageWidth else ""
           imageType = imageType if imageType else ""
         else:
           imageWidth = imageProperties['width']
           imageHeight = imageProperties['height']
-          imageType = imageProperties['mimeType']
+          imageType = imageProperties['mimeType'] if not(imageType) else imageType
       else:
-        imageWidth = imageWidth.group(1)
-        imageHeight = imageHeight.group(1)
-        
+        imageWidth = (imageWidth.group(2) if imageWidth.group(2) else imageWidth.group(4))
+        imageHeight = (imageHeight.group(2) if imageHeight.group(2) else imageHeight.group(4))
+      
       imageWidth, imageHeight = self.maxResizeImage(imageWidth, imageHeight)
-
+      
       images += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
     return images+videos+audios
   
-  def searchForMedia(self, soupString):
+  '''def searchForMedia(self, soupString):
     soupString = saxutils.unescape(soupString, {'&quot;' : '"'})
     #soupString = str(soupString)
     mediaSoup = BeautifulSoup.BeautifulSoup(soupString)#, fromEncoding='utf-8')
@@ -260,7 +274,7 @@ class MediaInjection(webapp.RequestHandler):
                   'url' : audio['href'],
                   'type' : 'audio/mpeg'}]
 
-    return images+videos+audios
+    return images+videos+audios'''
   
   def searchForMediaDOM(self, nodesToCrawl):
     crawledMedia = []
@@ -334,7 +348,7 @@ class MediaInjection(webapp.RequestHandler):
       mediaParent.appendChild(groupElem)
     return         
   
-  def createMediaNode(self, feedSoup, mediaLink):
+  '''def createMediaNode(self, feedSoup, mediaLink):
     mediaType = mediaLink['mediaType']
 
     if mediaType == 'img':
@@ -359,7 +373,7 @@ class MediaInjection(webapp.RequestHandler):
       groupTag.append(contentTag)
       return groupTag
     else:
-      return None
+      return None'''
   
   def isNotAdvertising(self, url):
     return True
@@ -381,7 +395,7 @@ class MediaInjection(webapp.RequestHandler):
     else:
       return feedUrl
   
-  def get_old(self):
+  def get(self):
     #memcache.flush_all()
     requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, MediaInjection.paramsList) 
     feedUrl = self.filterFeedUrl(requestParams['inputFeedUrl'])
@@ -392,33 +406,33 @@ class MediaInjection(webapp.RequestHandler):
     
     #todo - replace regex feed parsing with feedparser
     if feedType == 'rss':
-      parsingParams = { 'items' : '//*[local-name() = "channel"]/*[local-name() = "item"]', 
-                        'link' : '*[local-name() = "link" or local-name() = "origLink"]/node()',
-                        'id' : '*[local-name() = "guid"]/node()',
-                        'updated' : '*[local-name() = "pubDate" or local-name() = "date" local-name() = "modified"]',
+      parsingParams = { 'items' : '(child::*[local-name() = "channel"]/child::*[local-name() = "item"]) | (child::*[local-name() = "item"])',# 'items' : '//*[local-name() = "channel"]/*[local-name() = "item"]', 
+                        'link' : 'child::*[local-name() = "link" or local-name() = "origLink"]/node()',
+                        'id' : 'child::*[local-name() = "guid"]/node()',
+                        'updated' : 'child::*[local-name() = "pubDate" or local-name() = "date" local-name() = "modified"]',
                         'published' : 'issued',
-                        'description' : '*[local-name() = "description"]',
-                        'content' : '*[local-name() = "encoded"]',
-                        'existingMedia' : '*[(namespace-uri() = "http://search.yahoo.com/mrss/")and (local-name() = "thumbnail" or local-name() = "content" or local-name() = "group")]' }
+                        'description' : 'child::*[local-name() = "description"]',
+                        'content' : 'child::*[local-name() = "encoded"]',
+                        'existingMedia' : 'child::*[(namespace-uri() = "http://search.yahoo.com/mrss/")and (local-name() = "thumbnail" or local-name() = "content" or local-name() = "group")]' }
     elif feedType == 'atom':
-      parsingParams = { 'items' : '//*[local-name() = "entry"]', 
-                        'link' : '*[local-name() = "link" and (@rel="alternate" or not(@rel))]/@href',
-                        'id' : '*[local-name() = "id"]/node()',
-                        'updated' : '*[local-name() = "updated"]',
+      parsingParams = { 'items' : 'child::*[local-name() = "entry"]', 
+                        'link' : 'child::*[local-name() = "link" and (@rel="alternate" or not(@rel))]/@href',
+                        'id' : 'child::*[local-name() = "id"]/node()',
+                        'updated' : 'child::*[local-name() = "updated"]',
                         'published' : 'published',
-                        'description' : '*[local-name() = "summary"]',
-                        'content' : '*[local-name() = "content"]',
-                        'existingMedia' : '*[(namespace-uri() = "http://search.yahoo.com/mrss/")and (local-name() = "thumbnail" or local-name() = "content" or local-name() = "group")]' }
+                        'description' : 'child::*[local-name() = "summary"]',
+                        'content' : 'child::*[local-name() = "content"]',
+                        'existingMedia' : 'child::*[(namespace-uri() = "http://search.yahoo.com/mrss/")and (local-name() = "thumbnail" or local-name() = "content" or local-name() = "group")]' }
     else:
       return
-          
-                # crawl feed or web post
+    
+    # crawl feed or web post
     feedItems = xpath.find(parsingParams['items'], feedTree.documentElement)
     crawledMedia = []
     processedItems = 0
     
     for feedItemIndex in range(len(feedItems)):
-      if processedItems >= 10 or feedItemIndex >= 10:
+      if processedItems >= 16:
         break
       feedItem = feedItems[feedItemIndex]
       itemId = xpath.find(parsingParams['id'], feedItem)
@@ -433,11 +447,12 @@ class MediaInjection(webapp.RequestHandler):
       newDescription = None
       if cachedMedia and cachedMedia['itemHash'] == itemHash:
         scrapedMediaLinks = cachedMedia['crawledMedia']
+        processedItems += 1
         if cachedMedia.has_key("newDescription"):
           newDescription = cachedMedia['newDescription']
       else:
         if webScrape:
-          processedItems += 4
+          processedItems += 8
           linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
           linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
           scrapedMediaLinks = self.searchForMediaString(linkResultString)
@@ -447,7 +462,6 @@ class MediaInjection(webapp.RequestHandler):
           contentCrawlNodes = xpath.find(parsingParams['content'], feedItem)
           scrapedMediaLinks = self.searchForMediaDOM(contentCrawlNodes)
           if len(scrapedMediaLinks) == 0:
-            processedItems += 1
             descriptionCrawlNodes = xpath.find(parsingParams['description'], feedItem)
             scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
         
@@ -459,13 +473,21 @@ class MediaInjection(webapp.RequestHandler):
             newDescription = newDescription[0:getDescription-3] + "..."
           else:
             newDescription = newDescription[0:getDescription]
-      
-      crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId, 'newDescription' : newDescription}]
-      
+            
       existingMedia = xpath.find(parsingParams['existingMedia'], feedItem)
       for existingMediaItem in existingMedia:
+        if existingMediaItem.localName == "content":
+          if existingMediaItem.hasAttribute("type") and existingMediaItem.getAttribute("type").startswith("image"):
+            imageSrc = existingMediaItem.getAttribute("url")
+            imageWidth = existingMediaItem.getAttribute("width")
+            imageHeight = existingMediaItem.getAttribute("height")
+            imageType = existingMediaItem.getAttribute("type")
+            scrapedMediaLinks += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
         feedItem.removeChild(existingMediaItem)
-
+      
+      crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId, 'newDescription' : newDescription}]
+      #self.response.out.write(str(scrapedMediaLinks))
+      
     # count repeated links
     mediaCount = {}
     for itemMedia in crawledMedia:
@@ -475,7 +497,7 @@ class MediaInjection(webapp.RequestHandler):
     # filters 
     for itemMedia in crawledMedia:
       # nonidentified media
-      itemMedia['mediaLinks'] = filter(lambda x: x['type']!=None, itemMedia['mediaLinks'])
+      itemMedia['mediaLinks'] = filter(lambda x: x['type']!=None and x['type']!="", itemMedia['mediaLinks'])
       # small images
       itemMedia['mediaLinks'] = filter(self.isSmallImage, itemMedia['mediaLinks'])
       # ads
@@ -502,7 +524,7 @@ class MediaInjection(webapp.RequestHandler):
     self.response.out.write(feedTree.toxml())
     return
   
-  def get_new(self):
+  '''def get_new(self):
     import BeautifulSoup
     #memcache.flush_all()
     requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, MediaInjection.paramsList) 
@@ -686,7 +708,7 @@ class MediaInjection(webapp.RequestHandler):
         return self.get_new()
     else:
       #self.response.out.write("1")
-      return self.get_old()
+      return self.get_old()'''
     
 application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection), ('/cache.*', CacheControl)], debug=True)
 

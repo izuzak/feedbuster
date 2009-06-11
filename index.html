@@ -12,6 +12,12 @@
       function generate() {
         var inputUrl = document.getElementById("inputUrl").value;
         var outputUrl = "http://feed-buster.appspot.com/mediaInjection?inputFeedUrl=" + inputUrl;
+        if (document.getElementById("webScrape2").checked) {
+          outputUrl += "&webScrape=1"
+        }
+        if (document.getElementById("getDescription2").checked) {
+          outputUrl += "&getDescription=" + document.getElementById("maxDescription").value
+        }
         document.getElementById("outputUrl").value = outputUrl;
       }
     </script>
@@ -26,25 +32,46 @@
  <h1><a name="Service_API"/>Service API</h1>
  <p align="justify">Media injection is a simple HTTP service: you pass it a feed URL in a GET request URL parameter, and it returns the modified feed as the result. Just replace <i>FEED_URL</i> with your RSS or ATOM feed URL in <u>http://feed-buster.appspot.com/mediaInjection?inputFeedUrl=<i>FEED_URL</i></u> and use this URL as the new feed URL. </p> <p align="justify"> Or simply use this form to do the same thing:</p>
   </div>
-    <table name="frm" id="frm" style="margin-left: 60px; ">
+    <table name="frm" id="frm" style="margin-left: 60px;">
       <tr>
         <td>
-          <label for="inputUrl">Your RSS/ATOM feed URL:</label>
+          <b><label for="inputUrl">Your RSS/ATOM feed URL:</label></b>
         </td>
-        <tr></tr>
+        </tr><tr>
         <td>
-          <input style="width:300px" name="inputUrl" id="inputUrl" type="text" value="">
+          <input style="width:300px" name="inputUrl" id="inputUrl" type="text" value=""/>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <b><label for="webScrape1">Scrape media from website (default=No):</label></b>
+        </td>
+        </tr><tr>
+        <td>
+          <label for="webScrape1">No:</label><input name="webScrape" id="webScrape1" type="radio" value="No" checked="checked"/>
+          <label for="webScrape2">Yes:</label><input name="webScrape" id="webScrape2" type="radio" value="Yes"/>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <b><label for="getDescription1">Create description element (default=No):</label></b>
+        </td>
+        </tr><tr>
+        <td>
+          <label for="getDescription1">No:</label><input name="getDescription" id="getDescription1" type="radio" value="No" checked="checked"/>
+          <label for="getDescription2">Yes:</label><input name="getDescription" id="getDescription2" type="radio" value="Yes"/>
+          <label for="maxDescription">Max. length:</label> <input style="width:100px" name="maxDescription" id="maxDescription" type="text" value=""/>
         </td>
       </tr>
       <tr></tr>
       <tr><td>
-      <button name="genBtn" id="genBtn" onclick="generate();">Generate feed-buster URL</button>
+        <button style="margin-left: 60px;" name="genBtn" id="genBtn" onclick="generate();">Generate feed-buster URL</button>
       </td>
       </tr>
       <tr></tr>
       <tr>
       <td>
-      <label for="outputUrl">Feed-buster feed URL:</label>
+      <b><label for="outputUrl">Feed-buster feed URL:</label></b>
       </td><tr></tr><td>
       <input style="width:300px" name="outputUrl" id="outputUrl" type="text" value="">
       </td>
@@ -77,6 +104,7 @@ document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.
 <script type="text/javascript">
 try {
 var pageTracker = _gat._getTracker("UA-5997170-3");
+pageTracker._setDomainName("feed-buster.appspot.com");
 pageTracker._trackPageview();
 } catch(err) {}</script>
   </body>
