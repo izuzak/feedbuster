@@ -111,7 +111,7 @@ class MediaInjection(webapp.RequestHandler):
     return None
   
   def getFlickrVideo(self, videoId):
-    flickrCallUrl = FlickrApiCallUrl % videoId
+    flickrCallUrl = MediaInjection.FlickrApiCallUrl % videoId
     flickrApiResponseJson = FeedBusterUtils.fetchContentJSON(flickrCallUrl)
     for size in flickrApiResponseJson['sizes']['size']:
       if size['label'] == 'Site MP4':
@@ -466,13 +466,15 @@ class MediaInjection(webapp.RequestHandler):
             scrapedMediaLinks = self.searchForMediaDOM(descriptionCrawlNodes)
         
         if getDescription:
-          newDescription = xpath.find(parsingParams['content'], feedItem)[0].firstChild.data
-          newDescription = saxutils.unescape(newDescription, {'&quot;' : '"'})
-          newDescription = FeedBusterUtils.stripHtmlTags(newDescription)
-          if len(newDescription) > getDescription:
-            newDescription = newDescription[0:getDescription-3] + "..."
-          else:
-            newDescription = newDescription[0:getDescription]
+          newDescription = xpath.find(parsingParams['content'], feedItem)
+          if newDescription:
+            newDescription = newDescription[0].firstChild.data
+            newDescription = saxutils.unescape(newDescription, {'&quot;' : '"'})
+            newDescription = FeedBusterUtils.stripHtmlTags(newDescription)
+            if len(newDescription) > getDescription:
+              newDescription = newDescription[0:getDescription-3] + "..."
+            else:
+              newDescription = newDescription[0:getDescription]
             
       existingMedia = xpath.find(parsingParams['existingMedia'], feedItem)
       for existingMediaItem in existingMedia:
