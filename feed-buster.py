@@ -75,8 +75,17 @@ class FeedBusterUtils():
     
 class CacheControl(webapp.RequestHandler):
   def get(self):
-    return str(memcache.flush_all())
-    
+    requestParams = FeedBusterUtils.getRequestParams(self.request.query_string, ["cacheId"])
+    if requestParams.has_key("cacheId"):
+      result = str(memcache.delete(requestParams["cacheId"]))
+      result += "\n"
+      result += str(memcache.get_stats())
+      return result
+    else:
+      result = str(memcache.flush_all())
+      result += "\n"
+      result += str(memcache.get_stats())
+      return result
 class MediaInjection(webapp.RequestHandler): 
   paramsList = ['inputFeedUrl', 'version', 'webScrape', 'getDescription']
   
@@ -192,10 +201,10 @@ class MediaInjection(webapp.RequestHandler):
     imageTags = MediaInjection.ImageTagSearchRE.findall(stringToParse)
     for imageTag in imageTags:
       imageSrc = MediaInjection.ImageSrcRE.search(imageTag).group(1)
+      imageSrc = imageSrc if imageSrc.find("?") == -1 else imageSrc[0:imageSrc.find("?")]
       imageType = mimetypes.guess_type(imageSrc)[0]
       imageWidth = MediaInjection.ImageWidthRE.search(imageTag)
       imageHeight = MediaInjection.ImageHeightRE.search(imageTag)
-
       if not(imageWidth) or not(imageHeight) or not(imageType):
         imageProperties = self.getImageProperties(imageSrc)
         if not(imageProperties):
@@ -432,7 +441,7 @@ class MediaInjection(webapp.RequestHandler):
     processedItems = 0
     
     for feedItemIndex in range(len(feedItems)):
-      if processedItems >= 16:
+      if processedItems >= 20:
         break
       feedItem = feedItems[feedItemIndex]
       itemId = xpath.find(parsingParams['id'], feedItem)
@@ -489,7 +498,8 @@ class MediaInjection(webapp.RequestHandler):
       
       crawledMedia += [{'feedNode' : feedItem, 'itemHash' : itemHash, 'mediaLinks' : scrapedMediaLinks, 'cacheId' : cacheId, 'newDescription' : newDescription}]
       #self.response.out.write(str(scrapedMediaLinks))
-      
+    
+    # return
     # count repeated links
     mediaCount = {}
     for itemMedia in crawledMedia:
