@@ -53,7 +53,10 @@ class FeedBusterUtils():
   @staticmethod
   def fetchContentJSON(contentUrl):
     contentString = FeedBusterUtils.fetchContent(contentUrl)
-    return simplejson.loads(contentString)
+    if contentString != None:
+      return simplejson.loads(contentString)
+    else:
+      return None
     
   @staticmethod
   def getFeedType(feedTree):
@@ -143,13 +146,16 @@ class MediaInjection(webapp.RequestHandler):
       
   def getImageProperties(self, imageUrl):
     serviceCallUrl = MediaInjection.Img2JSONApiCallUrl % imageUrl
-    serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
-    imageInfo = simplejson.loads(serviceResultJson.replace("\\x00","").replace("'",'"').replace(";","")) if serviceResultJson else None
-    if imageInfo is None or imageInfo.has_key('error'):
-      imageInfo = None
+    serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl)
+    if not(serviceResultJson):
+      return None
     else:
-      imageInfo = { 'width' : str(imageInfo['width']), 'height' : str(imageInfo['height']), 'mimeType' : imageInfo['mimeType'] }
-    return imageInfo
+      imageInfo = simplejson.loads(serviceResultJson.replace("\\x00","").replace("'",'"').replace(";","")) if serviceResultJson else None
+      if imageInfo is None or imageInfo.has_key('error'):
+        imageInfo = None
+      else:
+        imageInfo = { 'width' : str(imageInfo['width']), 'height' : str(imageInfo['height']), 'mimeType' : imageInfo['mimeType'] }
+      return imageInfo
     
   def searchForMediaString(self, stringToParse):
     images = []
@@ -216,8 +222,8 @@ class MediaInjection(webapp.RequestHandler):
           imageHeight = imageProperties['height']
           imageType = imageProperties['mimeType'] if not(imageType) else imageType
       else:
-        imageWidth = (imageWidth.group(2) if imageWidth.group(2) else imageWidth.group(4))
-        imageHeight = (imageHeight.group(2) if imageHeight.group(2) else imageHeight.group(4))
+        imageWidth = imageWidth.group(2) if imageWidth.group(2) else imageWidth.group(4)
+        imageHeight = imageHeight.group(2) if imageHeight.group(2) else imageHeight.group(4)
       
       imageWidth, imageHeight = self.maxResizeImage(imageWidth, imageHeight)
       
@@ -509,7 +515,7 @@ class MediaInjection(webapp.RequestHandler):
     # filters 
     for itemMedia in crawledMedia:
       # nonidentified media
-      itemMedia['mediaLinks'] = filter(lambda x: x['type']!=None and x['type']!="", itemMedia['mediaLinks'])
+      itemMedia['mediaLinks'] = filter(lambda x: (x['type']!=None and x['type']!=""), itemMedia['mediaLinks'])# or ((not(x['type']) or x['type']=="") and (x['width'] and x['width']!="" and x['height'] and x['height']!="")), itemMedia['mediaLinks'])
       # small images
       itemMedia['mediaLinks'] = filter(self.isSmallImage, itemMedia['mediaLinks'])
       # ads
