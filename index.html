@@ -25,7 +25,9 @@
   <body> 
       <div id="wikicontent" style="margin-left:auto; margin-left: 60px; width:640px;"> 
  <h1><a name="What_is_feed-buster?"/>Feed-buster</h1>
- <p align="justify">Feed-buster is a collection of AppEngine services for remixing RSS and ATOM feeds. Currently, the only service is MediaInjection which injects media enclosure links into feed posts based on media present in the item description and content</p>
+ <p align="justify">In short, Feed-buster is a service that enables better RSS/ATOM feed media importing into FriendFeed. Here is the result of using Feed-buster when importing feeds into FriendFeed:</p>
+ <p><img src="http://feed-buster.googlecode.com/svn/trunk/static/fbDemoPic.PNG" width="640" height="400"/></p>
+ <p align="justify">Feed-buster is actually a collection of AppEngine services for remixing RSS and ATOM feeds. Currently, the only service is MediaInjection which injects media enclosure links into feed posts based on media present in the item description and content</p>
  <p align="justify">Media enclosures are special RSS/ATOM tags that identify rich media content in feed posts. The Media injection service automatically inserts media enclosure tags into RSS/ATOM feeds that do not have them. The service scrapes feed posts for rich media, generates and inserts media tags back into the feed for each post, and outputs the resulting feed.</p>
  <p align="justify"> Why do this? Some feed-based applications, like <a href="http://friendfeed.com">FriendFeed</a>, generate their UIs based on media present in feeds. These applications don&#x27;t crawl the content of feed posts for media items, rather just look for special media tags that identify this media. Therefore, if no media tags are present, the UI will not contain any rich media like images and videos, and this causes bad user experience.</p>
   <p align="justify">Currently, feed-buster scrapes images, Mp3 audio links, YouTube embedded videos and Vimeo embedded videos. Support for other media is on the way. </p>
@@ -43,8 +45,8 @@
         </td>
       </tr>
       <tr>
-        <td>
-          <b><label for="webScrape1">Scrape media from website (default=No, no need to change this if you don't know what it does):</label></b>
+        <td style="width:640px;" >
+          <b><label for="webScrape1">Scrape media from website (default=No, and no need to change this if you don't know what it does):</label></b>
         </td>
         </tr><tr>
         <td>
@@ -53,8 +55,8 @@
         </td>
       </tr>
       <tr>
-        <td>
-          <b><label for="getDescription1">Create description element (default=No, no need to change this if you don't know what it does):</label></b>
+        <td style="width:640px;" >
+          <b><label style="width:640px;" for="getDescription1">Create description element (default=No, and no need to change this if you don't know what it does):</label></b>
         </td>
         </tr><tr>
         <td>
