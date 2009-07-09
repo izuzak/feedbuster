@@ -10,6 +10,7 @@
     </style> 
     <script type="text/javascript">
       function generate() {
+        pageTracker._trackPageview('/formclick');
         var inputUrl = document.getElementById("inputUrl").value;
         var outputUrl = "http://feed-buster.appspot.com/mediaInjection?inputFeedUrl=" + inputUrl;
         if (document.getElementById("webScrape2").checked) {
@@ -106,7 +107,9 @@ document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.
 <script type="text/javascript">
 try {
 var pageTracker = _gat._getTracker("UA-5997170-3");
-pageTracker._setDomainName("feed-buster.appspot.com");
+pageTracker._setDomainName("none");
+pageTracker._setAllowLinker(true);
+pageTracker._setAllowHash(false);
 pageTracker._trackPageview();
 } catch(err) {}</script>
   </body>
