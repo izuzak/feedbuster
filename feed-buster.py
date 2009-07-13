@@ -353,9 +353,10 @@ class MediaInjection(webapp.RequestHandler):
     feedItems = xpath.find(parsingParams['items'], feedTree.documentElement)
     crawledMedia = []
     processedItems = 0
+    foundInCacheCounter = 0
     
     for feedItemIndex in range(len(feedItems)):
-      if processedItems >= 20:
+      if processedItems >= 15:
         break
       feedItem = feedItems[feedItemIndex]
       itemId = xpath.find(parsingParams['id'], feedItem)
@@ -371,11 +372,16 @@ class MediaInjection(webapp.RequestHandler):
       if cachedMedia and cachedMedia['itemHash'] == itemHash:
         scrapedMediaLinks = cachedMedia['crawledMedia']
         processedItems += 1
+        if foundInCacheCounter >= 1:
+          feedItem.parentNode.removeChild(feedItem)
+          continue
+        else:
+          foundInCacheCounter += 1
         if cachedMedia.has_key("newDescription"):
           newDescription = cachedMedia['newDescription']
       else:
         if webScrape:
-          processedItems += 8
+          processedItems += 7
           linkNodeUrl = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
           linkResultString = FeedBusterUtils.fetchContent(linkNodeUrl)
           scrapedMediaLinks = self.searchForMediaString(linkResultString)
