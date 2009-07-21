@@ -144,7 +144,10 @@ class MediaInjection(webapp.RequestHandler):
   def getImageProperties(self, imageUrl):
     serviceCallUrl = MediaInjection.Img2JSONApiCallUrl % imageUrl
     serviceResultJson = FeedBusterUtils.fetchContent(serviceCallUrl) 
-    imageInfo = simplejson.loads(serviceResultJson.replace("\\x00","").replace("'",'"').replace(";","")) if serviceResultJson else None
+    try:
+      imageInfo = simplejson.loads(serviceResultJson.replace("\\x00","").replace("'",'"').replace(";","")) if serviceResultJson else None
+    except:
+      imageInfo = None
     if imageInfo is None or imageInfo.has_key('error'):
       imageInfo = None
     else:
@@ -334,7 +337,7 @@ class MediaInjection(webapp.RequestHandler):
                         'published' : 'issued',
                         'description' : 'child::*[local-name() = "description"]',
                         'content' : 'child::*[local-name() = "encoded"]',
-                        'existingMedia' : 'child::*[namespace-uri() = "http://search.yahoo.com/mrss/"]',
+                        'existingMedia' : '(child::*[namespace-uri() = "http://search.yahoo.com/mrss/"]) | (child::*[local-name() = "enclosure"])',
                         'geoData' : 'child::*[namespace-uri() = "http://www.w3.org/2003/01/geo/wgs84_pos#"]'}
     elif feedType == 'atom':
       parsingParams = { 'items' : 'child::*[local-name() = "entry"]', 
@@ -344,7 +347,7 @@ class MediaInjection(webapp.RequestHandler):
                         'published' : 'published',
                         'description' : 'child::*[local-name() = "summary"]',
                         'content' : 'child::*[local-name() = "content"]',
-                        'existingMedia' : 'child::*[namespace-uri() = "http://search.yahoo.com/mrss/"]',
+                        'existingMedia' : '(child::*[namespace-uri() = "http://search.yahoo.com/mrss/"]) | (child::*[local-name() = "enclosure"])',
                         'geoData' : 'child::*[namespace-uri() = "http://www.w3.org/2003/01/geo/wgs84_pos#"]'}
     else:
       return
@@ -356,9 +359,12 @@ class MediaInjection(webapp.RequestHandler):
     foundInCacheCounter = 0
     
     for feedItemIndex in range(len(feedItems)):
-      if processedItems >= 15:
-        break
       feedItem = feedItems[feedItemIndex]
+      
+      if processedItems >= 15:
+        feedItem.parentNode.removeChild(feedItem)
+        continue
+        
       itemId = xpath.find(parsingParams['id'], feedItem)
       if not(itemId):
         itemId = xpath.find(parsingParams['link'], feedItem)[0].nodeValue
@@ -368,15 +374,16 @@ class MediaInjection(webapp.RequestHandler):
       cacheId = itemId + (('_' + webScrape) if webScrape else "")
       
       cachedMedia = memcache.get(cacheId)
+      
+      existingMedia = xpath.find(parsingParams['existingMedia'], feedItem)
       newDescription = None
       if cachedMedia and cachedMedia['itemHash'] == itemHash:
         scrapedMediaLinks = cachedMedia['crawledMedia']
         processedItems += 1
-        if foundInCacheCounter >= 1:
+        foundInCacheCounter += 1
+        if foundInCacheCounter >= 6:
           feedItem.parentNode.removeChild(feedItem)
           continue
-        else:
-          foundInCacheCounter += 1
         if cachedMedia.has_key("newDescription"):
           newDescription = cachedMedia['newDescription']
       else:
@@ -405,15 +412,30 @@ class MediaInjection(webapp.RequestHandler):
             else:
               newDescription = newDescription[0:getDescription]
             
-      existingMedia = xpath.find(parsingParams['existingMedia'], feedItem)
+        for existingMediaItem in existingMedia:
+          if existingMediaItem.localName == "content":
+            if existingMediaItem.hasAttribute("type") and existingMediaItem.getAttribute("type").startswith("image"):
+              imageSrc = existingMediaItem.getAttribute("url")
+              imageWidth = existingMediaItem.getAttribute("width")
+              imageHeight = existingMediaItem.getAttribute("height")
+              imageType = existingMediaItem.getAttribute("type")
+              scrapedMediaLinks += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
+            if existingMediaItem.hasAttribute("type") and existingMediaItem.getAttribute("type").startswith("application/x-shockwave-flash"):
+              #check for thumb:
+              thumbnail = "http://friendfeed.com/static/images/film.png?v=d071"
+              for thumbSearch in existingMedia:
+                if thumbSearch.localName == "content":
+                  if thumbSearch.hasAttribute("type") and thumbSearch.getAttribute("type").startswith("thumb"):
+                    thumbnail = thumbSearch.getAttribute("url")
+                    break
+              scrapedMediaLinks += [{'mediaType' : 'vid',
+                'url' : existingMediaItem.getAttribute("url"),
+                'thumb' : thumbnail,
+                'thumbWidth' : '160',
+                'thumbHeight' : '120',
+                'type' : 'application/x-shockwave-flash'}]
+      
       for existingMediaItem in existingMedia:
-        if existingMediaItem.localName == "content":
-          if existingMediaItem.hasAttribute("type") and existingMediaItem.getAttribute("type").startswith("image"):
-            imageSrc = existingMediaItem.getAttribute("url")
-            imageWidth = existingMediaItem.getAttribute("width")
-            imageHeight = existingMediaItem.getAttribute("height")
-            imageType = existingMediaItem.getAttribute("type")
-            scrapedMediaLinks += [{'mediaType' : 'img', 'url' : imageSrc, 'width' : imageWidth, 'height' : imageHeight, 'type' : imageType}]
         feedItem.removeChild(existingMediaItem)
       
       geoDataItems = xpath.find(parsingParams['geoData'], feedItem)
@@ -439,7 +461,7 @@ class MediaInjection(webapp.RequestHandler):
       # ads
       itemMedia['mediaLinks'] = filter(self.isNotAdvertising, itemMedia['mediaLinks'])
       # write to cache
-      memcache.set(itemMedia['cacheId'], {'itemHash' : itemMedia['itemHash'], 'crawledMedia' : itemMedia['mediaLinks']})
+      memcache.set(itemMedia['cacheId'], {'itemHash' : itemMedia['itemHash'], 'crawledMedia' : itemMedia['mediaLinks'], 'newDescription' : itemMedia['newDescription']})
       
     # filters 
     for itemMedia in crawledMedia:
