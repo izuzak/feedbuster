@@ -2,6 +2,8 @@
 <Module>
   <ModulePrefs title="Feed-buster URL builder" />
   <Content type="html"><![CDATA[
+    <link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/2917300808650760833/css/ph_core.css"> 
+    <link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/2917300808650760833/css/ph_detail.css" >
     <script type="text/javascript">
       var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
       document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
