@@ -549,7 +549,7 @@
         document.getElementById("outputUrl").value = outputUrl;
       }
     </script>
-    <div id="wikicontent">
+    <div id="wikicontent"> <p>
     <table name="frm" id="frm">
       <tr>
         <td>
@@ -595,7 +595,8 @@
       </td>
       </tr>
     </table>
-    <div id="wikicontent" style="padding:0 3em 1.2em 0; margin-left:auto; width:640px;"> 
+    </p>
+    <div 0; margin-left:auto; width:640px;"> 
     <p align="justify">Copy/paste the output URL and try the new feed out on the <a href="http://frinedfeed.com/api/feedtest" target="_blank">FriendFeed feedtest page</a>!
     </div>
     </div>
