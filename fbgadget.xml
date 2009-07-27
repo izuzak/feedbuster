@@ -8,7 +8,7 @@
       body { background: #fff; margin: 3px 8px;}
       body, select, input { font-family: arial, sans-serif;}
       body { font-size: 83%;}
-      td td, th th, th td, td th { font-size: 100%;}
+      td, td td, th th, th td, td th { font-size: 83%;}
       pre { font-size: 110%;}
       form { padding:0; margin:0;}
 
