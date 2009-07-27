@@ -537,7 +537,7 @@
     </script>
     <script type="text/javascript">
       function generate() {
-        pageTracker._trackPageview('/formclick');
+        _gat._getTracker("UA-5997170-3")._trackPageview('/formclick');
         var inputUrl = document.getElementById("inputUrl").value;
         var outputUrl = "http://feed-buster.appspot.com/mediaInjection?inputFeedUrl=" + inputUrl;
         if (document.getElementById("webScrape2").checked) {
@@ -561,7 +561,9 @@
     <label for="getDescription1">No:</label><input name="getDescription" id="getDescription1" type="radio" value="No" checked="checked"/>
     <label for="getDescription2">Yes:</label><input name="getDescription" id="getDescription2" type="radio" value="Yes"/>
     <label for="maxDescription">Max. length:</label> <input style="width:100px" name="maxDescription" id="maxDescription" type="text" value=""/>
+    
     </p><p><button style="margin-left: 60px;" name="genBtn" id="genBtn" onclick="generate();">Generate feed-buster URL</button>
+    
     </p><p><b><label for="outputUrl">Feed-buster feed URL:</label></b>
     <input style="width:300px" name="outputUrl" id="outputUrl" type="text" value="">
     </p>
