@@ -553,11 +553,11 @@
     <b><label for="inputUrl">Your RSS/ATOM feed URL:</label></b>
     <input style="width:300px" name="inputUrl" id="inputUrl" type="text" value=""/>
     
-    </p><p><label for="webScrape1"><b>Scrape media from website</b> (default=No, and no need to change this if you don't know what it does):</label>
+    </p><p><label for="webScrape1"><b>Scrape media from website</b>:</label>
     <label for="webScrape1">No:</label><input name="webScrape" id="webScrape1" type="radio" value="No" checked="checked"/>
     <label for="webScrape2">Yes:</label><input name="webScrape" id="webScrape2" type="radio" value="Yes"/>
     
-    </p><p><label style="width:640px;" for="getDescription1"><b>Create description element</b> (default=No, and no need to change this if you don't know what it does):</label>
+    </p><p><label style="width:640px;" for="getDescription1"><b>Create description element</b>:</label>
     <label for="getDescription1">No:</label><input name="getDescription" id="getDescription1" type="radio" value="No" checked="checked"/>
     <label for="getDescription2">Yes:</label><input name="getDescription" id="getDescription2" type="radio" value="Yes"/>
     <label for="maxDescription">Max. length:</label> <input style="width:100px" name="maxDescription" id="maxDescription" type="text" value=""/>
