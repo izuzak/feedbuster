@@ -3,6 +3,11 @@ version: 11
 runtime: python
 api_version: 1
 
+admin_console:
+  pages:
+  - name: Appstats
+    url: /stats
+
 handlers:
 - url: /mediaInjection(.*)
   script: feed-buster.py
@@ -10,6 +15,10 @@ handlers:
 - url: /cache(.*)
   script: feed-buster.py
 
+- url: /stats.*
+  script: $PYTHON_LIB/google/appengine/ext/appstats/ui.py
+  
 - url: .*
   static_files : index.html
   upload: index.html
+
