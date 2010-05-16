@@ -567,7 +567,7 @@
     </p><p><b><label for="outputUrl">Feed-buster feed URL:</label></b>
     <input style="width:300px" name="outputUrl" id="outputUrl" type="text" value="">
     </p>
-    <p align="justify">Copy/paste the output URL and try the new feed out on the <a href="http://frinedfeed.com/api/feedtest" target="_blank">FriendFeed feedtest page</a>!
+    <p align="justify">Copy/paste the output URL and try the new feed out on the <a href="http://friendfeed.com/api/feedtest" target="_blank">FriendFeed feedtest page</a>!
     </p>
     </div>
   ]]></Content>    

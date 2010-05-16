@@ -481,8 +481,12 @@ class MediaInjection(webapp.RequestHandler):
     self.response.headers['Content-Type'] = 'application/%s+xml' % feedType
     self.response.out.write(feedTree.toxml())
     return
-    
-application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection), ('/cache.*', CacheControl)], debug=True)
+
+class RedirectToGoogleCodeHandler(webapp.RequestHandler):
+  def get(self):
+    self.redirect('http://code.google.com/p/feed-buster')
+	
+application = webapp.WSGIApplication([('/mediaInjection.*', MediaInjection), ('/cache.*', CacheControl), ('/.*', RedirectToGoogleCodeHandler)], debug=True)
 
 def main():
   run_wsgi_app(application)

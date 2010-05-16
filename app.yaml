@@ -19,6 +19,5 @@ handlers:
   script: $PYTHON_LIB/google/appengine/ext/appstats/ui.py
   
 - url: .*
-  static_files : index.html
-  upload: index.html
+  script: feed-buster.py
 
