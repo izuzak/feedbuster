@@ -40,8 +40,6 @@ Optional URL parameters:
 
 ### URL-builder form
 
-A simple URL builder for feed-buster is available at: [http://izuzak.github.com/feedbuster](http://izuzak.github.com/feedbuster.)
-
 <script type="text/javascript">
   function generate() {
     _gaq.push(['_trackEvent', 'URL builder', 'createURL'])
