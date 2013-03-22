@@ -31,7 +31,7 @@ Optional URL parameters:
 
 ### URL-builder form
 
-A simple URL builder for feed-buster is available at: [http://izuzak.github.com/feedbuster](http://izuzak.github.com/feedbuster.)
+A simple URL builder for feed-buster is available at: [http://izuzak.github.com/feedbuster](http://izuzak.github.com/feedbuster).
 
 Credits
 -------
