@@ -48,3 +48,5 @@ License
 -------
 
 Licensed under the [Apache 2.0 License](https://github.com/izuzak/feedbuster/blob/master/LICENSE.md).
+
+[![gaugestracking alpha](https://secure.gaug.es/track.gif?h[site_id]=5163cdab613f5d50c70000ae&h[resource]=http%3A%2F%2Fgithub.com%2Fizuzak%2Ffeedbuster&h[title]=feedbuster%20%28GitHub%29&h[unique]=1&h[unique_hour]=1&h[unique_day]=1&h[unique_month]=1&h[unique_year]=1 "ivanzuzak.info")](http://ivanzuzak.info/)
